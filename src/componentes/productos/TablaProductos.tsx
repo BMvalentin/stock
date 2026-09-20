@@ -1,0 +1,161 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { Eye, Pencil, Power } from "lucide-react";
+import type { ProductoListado } from "@/servicios/productos/listarProductos";
+import { accionCambiarEstadoProducto } from "@/acciones/productos/accionCambiarEstadoProducto";
+import { calcularEstadoStock } from "@/servicios/stock/calcularEstadoStock";
+import {
+  ETIQUETAS_ESTADO_STOCK,
+  TONOS_ESTADO_STOCK,
+} from "@/constantes/estadoStock";
+import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { TablaDatos } from "@/componentes/tablas/TablaDatos";
+import { MenuAcciones } from "@/componentes/ui/MenuAcciones";
+import { Etiqueta } from "@/componentes/ui/Etiqueta";
+import { Alerta } from "@/componentes/ui/Alerta";
+import { EstadoVacio } from "@/componentes/ui/EstadoVacio";
+
+export function TablaProductos({
+  productos,
+  moneda,
+  locale,
+  esAdmin,
+}: {
+  productos: ProductoListado[];
+  moneda: string;
+  locale: string;
+  esAdmin: boolean;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [, iniciarTransicion] = useTransition();
+
+  function alternarEstado(producto: ProductoListado) {
+    iniciarTransicion(async () => {
+      const resultado = await accionCambiarEstadoProducto(
+        producto.id,
+        !producto.activo,
+      );
+      setError(resultado.error ?? null);
+    });
+  }
+
+  if (productos.length === 0) {
+    return (
+      <EstadoVacio
+        titulo="Sin productos"
+        descripcion="No se encontraron productos con los filtros aplicados."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {error ? <Alerta tono="error">{error}</Alerta> : null}
+
+      <TablaDatos
+        columnas={[
+          { encabezado: "Producto" },
+          { encabezado: "Categoría" },
+          { encabezado: "Precios" },
+          { encabezado: "Stock", alineacion: "centro" },
+          { encabezado: "Estado" },
+          { encabezado: "", alineacion: "der" },
+        ]}
+        filas={productos.map((producto) => {
+          const estado = calcularEstadoStock(
+            producto.stockActual,
+            producto.stockMinimo,
+          );
+
+          return {
+            id: producto.id,
+            celdas: [
+              <div key="producto" className="min-w-0">
+                <Link
+                  href={`/productos/${producto.id}`}
+                  className="truncate text-sm font-medium text-zinc-900 hover:underline"
+                >
+                  {producto.nombre}
+                </Link>
+                <p className="truncate text-xs text-zinc-500">{producto.sku}</p>
+              </div>,
+              <span key="categoria" className="text-sm text-zinc-600">
+                {producto.categoria}
+              </span>,
+              <div key="precios" className="space-y-0.5">
+                {producto.precios.length === 0 ? (
+                  <span className="text-xs text-zinc-400">Sin precios</span>
+                ) : (
+                  producto.precios.map((precio) => (
+                    <p
+                      key={precio.metodoPagoId}
+                      className="whitespace-nowrap text-xs text-zinc-600"
+                    >
+                      <span className="text-zinc-400">{precio.metodo}:</span>{" "}
+                      {formatearMoneda(precio.precio, moneda, locale)}
+                    </p>
+                  ))
+                )}
+              </div>,
+              <div key="stock" className="space-y-1">
+                <p className="text-sm font-medium text-zinc-900">
+                  {producto.stockActual}
+                </p>
+                <Etiqueta tono={TONOS_ESTADO_STOCK[estado]}>
+                  {ETIQUETAS_ESTADO_STOCK[estado]}
+                </Etiqueta>
+              </div>,
+              <Etiqueta
+                key="estado"
+                tono={producto.activo ? "exito" : "neutral"}
+              >
+                {producto.activo ? "Activo" : "Inactivo"}
+              </Etiqueta>,
+              <div key="acciones" className="flex justify-end">
+                <MenuAcciones
+                  items={[
+                    {
+                      etiqueta: "Ver detalle",
+                      icono: <Eye className="h-4 w-4" strokeWidth={1.75} />,
+                      href: `/productos/${producto.id}`,
+                    },
+                    ...(esAdmin
+                      ? [
+                          {
+                            etiqueta: "Editar",
+                            icono: (
+                              <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                            ),
+                            href: `/productos/${producto.id}/editar`,
+                          },
+                          {
+                            etiqueta: producto.activo
+                              ? "Desactivar"
+                              : "Reactivar",
+                            icono: (
+                              <Power className="h-4 w-4" strokeWidth={1.75} />
+                            ),
+                            peligro: producto.activo,
+                            accion: () => alternarEstado(producto),
+                            confirmacion: producto.activo
+                              ? {
+                                  titulo: "Desactivar producto",
+                                  descripcion: `¿Desactivar "${producto.nombre}"? No se elimina del historial.`,
+                                  textoConfirmar: "Desactivar",
+                                }
+                              : undefined,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </div>,
+            ],
+          };
+        })}
+      />
+    </div>
+  );
+}

@@ -7,8 +7,8 @@
 | Framework | Next.js 16 (App Router, Turbopack) |
 | Lenguaje | TypeScript 5 (strict) |
 | Runtime | Node.js 20.9+ |
-| ORM | Prisma 7 (`prisma-client` + driver adapter `@prisma/adapter-pg`) |
-| Base de datos | PostgreSQL |
+| ORM | Prisma 7 (`prisma-client` + driver adapter `@prisma/adapter-mariadb`) |
+| Base de datos | TiDB Cloud (protocolo MySQL) |
 | Autenticación | Auth.js v5 (NextAuth) — Credentials + Google OAuth |
 | UI | Tailwind CSS v4 |
 | Validación | Zod 4 |

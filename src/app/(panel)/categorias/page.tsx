@@ -1,15 +1,21 @@
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
-import { PaginaEnConstruccion } from "@/componentes/comunes/PaginaEnConstruccion";
+import { listarCategorias } from "@/servicios/categorias/listarCategorias";
+import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
+import { TablaCategorias } from "@/componentes/categorias/TablaCategorias";
 
 export const metadata = { title: "Categorías" };
 
 export default async function PaginaCategorias() {
   await requerirAdmin();
+  const categorias = await listarCategorias();
 
   return (
-    <PaginaEnConstruccion
-      titulo="Categorías"
-      descripcion="Alta, edición y desactivación lógica de categorías. No se elimina una categoría con productos asociados."
-    />
+    <div className="space-y-6">
+      <EncabezadoPagina
+        titulo="Categorías"
+        descripcion="Organizá el catálogo. Las categorías se desactivan, no se eliminan."
+      />
+      <TablaCategorias categorias={categorias} />
+    </div>
   );
 }

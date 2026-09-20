@@ -1,89 +1,150 @@
+import {
+  Boxes,
+  CircleAlert,
+  Package,
+  ShoppingCart,
+  TrendingUp,
+} from "lucide-react";
 import { requerirSesion } from "@/lib/seguridad/requerirSesion";
+import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerConfiguracionGeneral";
 import { obtenerResumenDashboard } from "@/servicios/dashboard/obtenerResumenDashboard";
+import { obtenerProductosCriticos } from "@/servicios/dashboard/obtenerProductosCriticos";
+import { obtenerPedidosRecientes } from "@/servicios/dashboard/obtenerPedidosRecientes";
+import { obtenerMovimientosRecientes } from "@/servicios/dashboard/obtenerMovimientosRecientes";
+import { obtenerVentasPorDia } from "@/servicios/dashboard/obtenerVentasPorDia";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
+import { Alerta } from "@/componentes/ui/Alerta";
+import { PanelSeccion } from "@/componentes/ui/PanelSeccion";
+import { TarjetaMetrica } from "@/componentes/dashboard/TarjetaMetrica";
+import { GraficoVentas } from "@/componentes/dashboard/GraficoVentas";
+import { ListaStockCritico } from "@/componentes/dashboard/ListaStockCritico";
+import { ListaPedidosRecientes } from "@/componentes/dashboard/ListaPedidosRecientes";
+import { ListaMovimientosRecientes } from "@/componentes/dashboard/ListaMovimientosRecientes";
 
 export const metadata = { title: "Dashboard" };
 
-function Tarjeta({
-  etiqueta,
-  valor,
-  acento,
-}: {
-  etiqueta: string;
-  valor: string;
-  acento?: "alerta" | "ok";
-}) {
-  const color =
-    acento === "alerta"
-      ? "text-red-600"
-      : acento === "ok"
-        ? "text-emerald-600"
-        : "text-zinc-900";
-
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        {etiqueta}
-      </p>
-      <p className={`mt-2 text-2xl font-semibold ${color}`}>{valor}</p>
-    </div>
-  );
-}
-
-export default async function PaginaDashboard() {
+export default async function PaginaDashboard({
+  searchParams,
+}: PageProps<"/dashboard">) {
   const usuario = await requerirSesion();
-  const resumen = await obtenerResumenDashboard();
+  const params = await searchParams;
+
+  const [configuracion, resumen, criticos, pedidos, movimientos, ventas] =
+    await Promise.all([
+      obtenerConfiguracionGeneral(),
+      obtenerResumenDashboard(),
+      obtenerProductosCriticos(),
+      obtenerPedidosRecientes(),
+      obtenerMovimientosRecientes(),
+      obtenerVentasPorDia(),
+    ]);
+
+  const { moneda, locale } = configuracion;
 
   return (
-    <section className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-zinc-900">Dashboard</h1>
-        <p className="text-sm text-zinc-600">
-          Hola {usuario.nombre ?? usuario.email}. Rol:{" "}
-          <span className="font-medium">{usuario.rol}</span>.
-        </p>
-      </header>
+    <div className="space-y-6">
+      <EncabezadoPagina
+        titulo={`Hola, ${usuario.nombre ?? usuario.email}`}
+        descripcion="Resumen del mes en curso y lo que requiere atención."
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Tarjeta
-          etiqueta="Vendido hoy"
-          valor={formatearMoneda(resumen.totalVendidoHoy)}
-          acento="ok"
+      {params.error === "sin-permiso" ? (
+        <Alerta tono="advertencia">
+          No tenés permisos para acceder a esa sección.
+        </Alerta>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <TarjetaMetrica
+          etiqueta="Vendido del mes"
+          valor={formatearMoneda(resumen.totalVendidoPeriodo, moneda, locale)}
+          tono="exito"
+          icono={<TrendingUp className="h-4 w-4" strokeWidth={1.75} />}
         />
-        <Tarjeta
-          etiqueta="Pedidos del día"
-          valor={String(resumen.pedidosDelDia)}
+        <TarjetaMetrica
+          etiqueta="Pedidos del mes"
+          valor={String(resumen.pedidosPeriodo)}
+          icono={<ShoppingCart className="h-4 w-4" strokeWidth={1.75} />}
+          href="/pedidos"
         />
-        <Tarjeta
+        <TarjetaMetrica
           etiqueta="Pedidos pendientes"
           valor={String(resumen.pedidosPendientes)}
+          tono={resumen.pedidosPendientes > 0 ? "alerta" : "neutral"}
+          icono={<ShoppingCart className="h-4 w-4" strokeWidth={1.75} />}
+          href="/pedidos"
         />
-        <Tarjeta
-          etiqueta="Movimientos del día"
-          valor={String(resumen.movimientosDelDia)}
-        />
-        <Tarjeta
+        <TarjetaMetrica
           etiqueta="Productos activos"
           valor={String(resumen.productosActivos)}
+          icono={<Package className="h-4 w-4" strokeWidth={1.75} />}
+          href="/productos"
         />
-        <Tarjeta
+        <TarjetaMetrica
           etiqueta="Sin stock"
           valor={String(resumen.productosSinStock)}
-          acento="alerta"
+          tono={resumen.productosSinStock > 0 ? "peligro" : "neutral"}
+          icono={<CircleAlert className="h-4 w-4" strokeWidth={1.75} />}
+          href="/stock"
         />
-        <Tarjeta
+        <TarjetaMetrica
           etiqueta="Stock bajo"
           valor={String(resumen.productosStockBajo)}
-          acento="alerta"
+          tono={resumen.productosStockBajo > 0 ? "alerta" : "neutral"}
+          icono={<Boxes className="h-4 w-4" strokeWidth={1.75} />}
+          href="/stock"
         />
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <PanelSeccion
+            titulo="Ventas de los últimos 14 días"
+            descripcion="Pedidos no cancelados por día."
+          >
+            <GraficoVentas datos={ventas} moneda={moneda} locale={locale} />
+          </PanelSeccion>
+        </div>
+        <PanelSeccion
+          titulo="Requiere atención"
+          descripcion="Productos con stock crítico."
+          enlace="/stock"
+        >
+          <ListaStockCritico productos={criticos} />
+        </PanelSeccion>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PanelSeccion
+          titulo="Pedidos recientes"
+          enlace="/pedidos"
+          textoEnlace="Ver pedidos"
+        >
+          <ListaPedidosRecientes
+            pedidos={pedidos}
+            moneda={moneda}
+            locale={locale}
+          />
+        </PanelSeccion>
+        <PanelSeccion
+          titulo="Movimientos recientes"
+          enlace={usuario.rol === "ADMIN" ? "/movimientos" : undefined}
+          textoEnlace="Ver movimientos"
+        >
+          <ListaMovimientosRecientes
+            movimientos={movimientos}
+            locale={locale}
+          />
+        </PanelSeccion>
+      </div>
+
       {usuario.rol === "EMPLEADO" ? (
-        <p className="rounded-md bg-zinc-200/60 px-4 py-3 text-sm text-zinc-700">
+        <p className="rounded-md bg-zinc-100 px-4 py-3 text-sm text-zinc-600">
           Acceso de solo lectura. Las acciones administrativas no están
           disponibles para tu rol.
         </p>
       ) : null}
-    </section>
+    </div>
   );
 }

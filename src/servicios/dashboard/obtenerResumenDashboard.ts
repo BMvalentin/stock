@@ -1,34 +1,25 @@
 import { prisma } from "@/lib/prisma/cliente";
+import { rangoMesActual } from "@/lib/utilidades/rangoMesActual";
 
 export type ResumenDashboard = {
   productosActivos: number;
   productosSinStock: number;
   productosStockBajo: number;
   pedidosPendientes: number;
-  pedidosDelDia: number;
-  movimientosDelDia: number;
-  totalVendidoHoy: number;
+  pedidosPeriodo: number;
+  totalVendidoPeriodo: number;
 };
 
-function rangoDelDia(): { inicio: Date; fin: Date } {
-  const inicio = new Date();
-  inicio.setHours(0, 0, 0, 0);
-  const fin = new Date(inicio);
-  fin.setDate(fin.getDate() + 1);
-  return { inicio, fin };
-}
-
 export async function obtenerResumenDashboard(): Promise<ResumenDashboard> {
-  const { inicio, fin } = rangoDelDia();
+  const { inicio, fin } = rangoMesActual();
 
   const [
     productosActivos,
     productosSinStock,
     productosStockBajo,
     pedidosPendientes,
-    pedidosDelDia,
-    movimientosDelDia,
-    ventasDelDia,
+    pedidosPeriodo,
+    ventas,
   ] = await Promise.all([
     prisma.producto.count({ where: { activo: true } }),
     prisma.producto.count({ where: { activo: true, stockActual: { lte: 0 } } }),
@@ -39,12 +30,11 @@ export async function obtenerResumenDashboard(): Promise<ResumenDashboard> {
       },
     }),
     prisma.pedido.count({
-      where: { estado: { in: ["PENDIENTE", "CONFIRMADO", "PREPARANDO", "LISTO"] } },
+      where: {
+        estado: { in: ["PENDIENTE", "CONFIRMADO", "PREPARANDO", "LISTO"] },
+      },
     }),
     prisma.pedido.count({ where: { createdAt: { gte: inicio, lt: fin } } }),
-    prisma.movimientoStock.count({
-      where: { createdAt: { gte: inicio, lt: fin } },
-    }),
     prisma.pedido.aggregate({
       _sum: { total: true },
       where: {
@@ -59,8 +49,7 @@ export async function obtenerResumenDashboard(): Promise<ResumenDashboard> {
     productosSinStock,
     productosStockBajo,
     pedidosPendientes,
-    pedidosDelDia,
-    movimientosDelDia,
-    totalVendidoHoy: Number(ventasDelDia._sum.total ?? 0),
+    pedidosPeriodo,
+    totalVendidoPeriodo: Number(ventas._sum.total ?? 0),
   };
 }

@@ -1,0 +1,237 @@
+"use client";
+
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { accionCrearProducto } from "@/acciones/productos/accionCrearProducto";
+import { accionActualizarProducto } from "@/acciones/productos/accionActualizarProducto";
+import {
+  ESTADO_FORMULARIO_INICIAL,
+  type EstadoFormulario,
+} from "@/tipos/formulario";
+import type { ProductoDetalle } from "@/servicios/productos/obtenerProducto";
+import type { MetodoPagoActivo } from "@/servicios/metodosPago/listarMetodosPagoActivos";
+import type { OpcionCampo } from "@/componentes/ui/CampoSelect";
+import { SeccionFormulario } from "@/componentes/ui/SeccionFormulario";
+import { CampoTexto } from "@/componentes/ui/CampoTexto";
+import { CampoSelect } from "@/componentes/ui/CampoSelect";
+import { CampoTextarea } from "@/componentes/ui/CampoTextarea";
+import { CampoCheckbox } from "@/componentes/ui/CampoCheckbox";
+import { Boton } from "@/componentes/ui/Boton";
+import { Alerta } from "@/componentes/ui/Alerta";
+import { Etiqueta } from "@/componentes/ui/Etiqueta";
+
+export function FormularioProducto({
+  producto,
+  categorias,
+  metodosPago,
+  proveedores,
+}: {
+  producto?: ProductoDetalle;
+  categorias: OpcionCampo[];
+  metodosPago: MetodoPagoActivo[];
+  proveedores: OpcionCampo[];
+}) {
+  const router = useRouter();
+  const esEdicion = Boolean(producto);
+  const accion = producto
+    ? accionActualizarProducto.bind(null, producto.id)
+    : accionCrearProducto;
+  const [estado, enviar, pendiente] = useActionState<EstadoFormulario, FormData>(
+    accion,
+    ESTADO_FORMULARIO_INICIAL,
+  );
+
+  useEffect(() => {
+    if (estado.exito) {
+      router.push(estado.redirigir ?? "/productos");
+      router.refresh();
+    }
+  }, [estado.exito, estado.redirigir, router]);
+
+  const precioPorMetodo = new Map(
+    (producto?.precios ?? []).map((precio) => [
+      precio.metodoPagoId,
+      precio.precio,
+    ]),
+  );
+  const proveedoresSeleccionados = new Set(
+    (producto?.proveedores ?? []).map((proveedor) => proveedor.id),
+  );
+  const principalId = producto?.proveedores.find(
+    (proveedor) => proveedor.esPrincipal,
+  )?.id;
+
+  return (
+    <form action={enviar} className="space-y-6">
+      {estado.error ? <Alerta tono="error">{estado.error}</Alerta> : null}
+
+      <SeccionFormulario titulo="Información básica">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CampoTexto
+            etiqueta="Nombre"
+            name="nombre"
+            defaultValue={producto?.nombre ?? ""}
+            requerido
+            error={estado.errores?.nombre?.[0]}
+          />
+          <CampoTexto
+            etiqueta="SKU"
+            name="sku"
+            defaultValue={producto?.sku ?? ""}
+            requerido
+            error={estado.errores?.sku?.[0]}
+          />
+        </div>
+        <CampoSelect
+          etiqueta="Categoría"
+          name="categoriaId"
+          opciones={categorias}
+          marcador="Seleccioná una categoría"
+          defaultValue={producto?.categoriaId ?? ""}
+          requerido
+          error={estado.errores?.categoriaId?.[0]}
+        />
+        <CampoTextarea
+          etiqueta="Descripción"
+          name="descripcion"
+          rows={3}
+          defaultValue={producto?.descripcion ?? ""}
+          error={estado.errores?.descripcion?.[0]}
+        />
+      </SeccionFormulario>
+
+      <SeccionFormulario
+        titulo="Precios"
+        descripcion="Un precio por cada método de pago activo."
+      >
+        {metodosPago.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            No hay métodos de pago activos. Configuralos en Configuración.
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {metodosPago.map((metodo) => (
+              <CampoTexto
+                key={metodo.id}
+                etiqueta={metodo.nombre}
+                name={`precio_${metodo.id}`}
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={precioPorMetodo.get(metodo.id) ?? ""}
+                error={estado.errores?.[`precio_${metodo.id}`]?.[0]}
+              />
+            ))}
+          </div>
+        )}
+      </SeccionFormulario>
+
+      <SeccionFormulario titulo="Stock">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <CampoTexto
+            etiqueta="Stock mínimo"
+            name="stockMinimo"
+            type="number"
+            min="0"
+            step="1"
+            defaultValue={producto?.stockMinimo ?? 0}
+            requerido
+            error={estado.errores?.stockMinimo?.[0]}
+          />
+          <CampoTexto
+            etiqueta="Unidades por bulto"
+            name="unidadesPorBulto"
+            type="number"
+            min="1"
+            step="1"
+            defaultValue={producto?.unidadesPorBulto ?? 1}
+            requerido
+            error={estado.errores?.unidadesPorBulto?.[0]}
+          />
+          {esEdicion ? (
+            <div className="space-y-1.5">
+              <span className="block text-sm font-medium text-zinc-700">
+                Stock actual
+              </span>
+              <div className="flex h-9 items-center rounded-md border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700">
+                {producto?.stockActual ?? 0}
+              </div>
+              <p className="text-xs text-zinc-500">
+                Se ajusta desde Stock con un movimiento.
+              </p>
+            </div>
+          ) : (
+            <CampoTexto
+              etiqueta="Stock inicial"
+              name="stockInicial"
+              type="number"
+              min="0"
+              step="1"
+              defaultValue={0}
+              ayuda="Genera un movimiento de ingreso."
+            />
+          )}
+        </div>
+      </SeccionFormulario>
+
+      <SeccionFormulario titulo="Proveedores">
+        {proveedores.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            No hay proveedores activos. Creá uno en Proveedores.
+          </p>
+        ) : (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {proveedores.map((proveedor) => (
+                <CampoCheckbox
+                  key={proveedor.valor}
+                  etiqueta={proveedor.etiqueta}
+                  name="proveedorIds"
+                  value={proveedor.valor}
+                  defaultChecked={proveedoresSeleccionados.has(
+                    proveedor.valor,
+                  )}
+                />
+              ))}
+            </div>
+            <CampoSelect
+              etiqueta="Proveedor principal"
+              name="proveedorPrincipalId"
+              opciones={proveedores}
+              marcador="Sin proveedor principal"
+              defaultValue={principalId ?? ""}
+              ayuda="Debe estar entre los proveedores seleccionados."
+            />
+          </>
+        )}
+      </SeccionFormulario>
+
+      {esEdicion ? (
+        <SeccionFormulario titulo="Estado">
+          <div className="flex items-center gap-2 text-sm text-zinc-600">
+            <Etiqueta tono={producto?.activo ? "exito" : "neutral"}>
+              {producto?.activo ? "Activo" : "Inactivo"}
+            </Etiqueta>
+            <span>
+              El estado se cambia desde el listado o el detalle del producto.
+            </span>
+          </div>
+        </SeccionFormulario>
+      ) : null}
+
+      <div className="flex justify-end gap-2">
+        <Boton
+          variante="secundario"
+          type="button"
+          onClick={() => router.back()}
+          disabled={pendiente}
+        >
+          Cancelar
+        </Boton>
+        <Boton type="submit" cargando={pendiente}>
+          {esEdicion ? "Guardar cambios" : "Crear producto"}
+        </Boton>
+      </div>
+    </form>
+  );
+}

@@ -7,7 +7,7 @@ reportes y auditoría de un comercio.
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript
-- Prisma 7 + PostgreSQL
+- Prisma 7 + TiDB Cloud (protocolo MySQL)
 - Auth.js v5 (NextAuth) — correo/contraseña y Google OAuth
 - Tailwind CSS v4
 - Zod 4
@@ -15,7 +15,7 @@ reportes y auditoría de un comercio.
 ## Requisitos
 
 - Node.js 20.9 o superior
-- Una base de datos PostgreSQL accesible (`DATABASE_URL`)
+- Una base de datos TiDB Cloud / MySQL accesible (`DATABASE_URL`)
 
 ## Puesta en marcha
 
@@ -28,7 +28,7 @@ reportes y auditoría de un comercio.
 2. Crear `.env` a partir de `.env.example` y completar:
 
    ```env
-   DATABASE_URL="postgresql://usuario:contrasena@host:5432/basededatos?schema=public"
+   DATABASE_URL="mysql://usuario:contrasena@host:4000/basededatos?sslaccept=strict"
    AUTH_SECRET="<openssl rand -base64 32>"
    GOOGLE_CLIENT_ID=""
    GOOGLE_CLIENT_SECRET=""

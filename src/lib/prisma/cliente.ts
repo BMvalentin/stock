@@ -1,5 +1,5 @@
-import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { crearAdaptador } from "@/lib/prisma/crearAdaptador";
 
 // Reutiliza una única instancia de PrismaClient por proceso para no agotar
 // el pool de conexiones durante el hot-reload de desarrollo.
@@ -8,11 +8,7 @@ const globalParaPrisma = globalThis as unknown as {
 };
 
 function crearClientePrisma(): PrismaClient {
-  const adaptador = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-  });
-
-  return new PrismaClient({ adapter: adaptador });
+  return new PrismaClient({ adapter: crearAdaptador() });
 }
 
 export const prisma = globalParaPrisma.prisma ?? crearClientePrisma();
