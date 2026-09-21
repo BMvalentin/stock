@@ -3,6 +3,9 @@ import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
 
+// La desactivación es lógica y conserva la imagen del producto en Cloudinary:
+// si el producto se reactiva, la imagen sigue disponible. El recurso solo se
+// elimina cuando un ADMIN quita o reemplaza explícitamente la imagen.
 export async function cambiarEstadoProducto(
   id: string,
   activo: boolean,

@@ -4,11 +4,18 @@ import {
   esquemaProducto,
   esquemaStockInicial,
 } from "@/lib/validaciones/productos";
+import { validarImagenProducto } from "@/lib/validaciones/imagenes";
 import { listarMetodosPagoActivos } from "@/servicios/metodosPago/listarMetodosPagoActivos";
 import type { DatosProducto } from "@/servicios/productos/crearProducto";
 
 export type ResultadoParseoProducto =
-  | { ok: true; datos: DatosProducto; stockInicial: number }
+  | {
+      ok: true;
+      datos: DatosProducto;
+      stockInicial: number;
+      imagenArchivo?: File;
+      eliminarImagen: boolean;
+    }
   | { ok: false; errores: Record<string, string[]> };
 
 // Traduce el FormData del formulario de producto a los datos validados del
@@ -20,7 +27,9 @@ export async function parsearProducto(
     nombre: formData.get("nombre"),
     descripcion: formData.get("descripcion"),
     sku: formData.get("sku"),
+    barcode: formData.get("barcode") ?? "",
     categoriaId: formData.get("categoriaId"),
+    unidadVenta: formData.get("unidadVenta") ?? "UNIDAD",
     stockMinimo: formData.get("stockMinimo"),
     unidadesPorBulto: formData.get("unidadesPorBulto"),
   });
@@ -28,6 +37,22 @@ export async function parsearProducto(
   if (!resultado.success) {
     return { ok: false, errores: z.flattenError(resultado.error).fieldErrors };
   }
+
+  const archivoCrudo = formData.get("imagen");
+  const imagenArchivo =
+    archivoCrudo instanceof File && archivoCrudo.size > 0
+      ? archivoCrudo
+      : undefined;
+
+  if (imagenArchivo) {
+    const validacion = validarImagenProducto(imagenArchivo);
+
+    if (!validacion.valida) {
+      return { ok: false, errores: { imagen: [validacion.mensaje] } };
+    }
+  }
+
+  const eliminarImagen = formData.get("imagenEliminar") === "1";
 
   const metodos = await listarMetodosPagoActivos();
   const precios: DatosProducto["precios"] = [];
@@ -70,11 +95,15 @@ export async function parsearProducto(
   return {
     ok: true,
     stockInicial,
+    imagenArchivo,
+    eliminarImagen,
     datos: {
       nombre: resultado.data.nombre,
       descripcion: resultado.data.descripcion,
       sku: resultado.data.sku,
+      barcode: resultado.data.barcode,
       categoriaId: resultado.data.categoriaId,
+      unidadVenta: resultado.data.unidadVenta,
       stockMinimo: resultado.data.stockMinimo,
       unidadesPorBulto: resultado.data.unidadesPorBulto,
       precios,

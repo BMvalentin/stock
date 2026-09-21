@@ -12,7 +12,7 @@ export default async function PaginaDetalleProveedor({
 }: PageProps<"/proveedores/[id]">) {
   const usuario = await requerirSesion();
   const { id } = await params;
-  const proveedor = await obtenerProveedor(id);
+  const proveedor = await obtenerProveedor(id, usuario.rol === "ADMIN");
 
   if (!proveedor) notFound();
 

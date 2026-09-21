@@ -3,12 +3,14 @@ import type {
   EstadoPago,
   EstadoPedido,
   TipoEntrega,
+  UnidadVenta,
 } from "@/generated/prisma/enums";
 
 export type DetallePedidoItem = {
   id: string;
   productoId: string;
   nombreProducto: string;
+  unidadVenta: UnidadVenta;
   precioUnitario: number;
   cantidad: number;
   subtotal: number;
@@ -33,19 +35,18 @@ export type PedidoDetalle = {
   estadoPago: EstadoPago;
   tipoEntrega: TipoEntrega;
   direccionEntrega: string | null;
+  referenciaEntrega: string | null;
+  mapsUrl: string | null;
+  latitud: number | null;
+  longitud: number | null;
   subtotal: number;
   costoEnvio: number;
   total: number;
   observaciones: string | null;
-  cliente: {
-    id: string;
-    nombre: string;
-    telefono: string;
-    email: string | null;
-    direccion: string | null;
-    localidad: string | null;
-    codigoPostal: string | null;
-  };
+  clienteNombre: string;
+  clienteTelefono: string;
+  clienteDireccion: string | null;
+  clienteLocalidad: string | null;
   metodoPago: string | null;
   vendedor: string | null;
   detalles: DetallePedidoItem[];
@@ -66,21 +67,18 @@ export async function obtenerPedido(
       estadoPago: true,
       tipoEntrega: true,
       direccionEntrega: true,
+      referenciaEntrega: true,
+      mapsUrl: true,
+      latitud: true,
+      longitud: true,
       subtotal: true,
       costoEnvio: true,
       total: true,
       observaciones: true,
-      cliente: {
-        select: {
-          id: true,
-          nombre: true,
-          telefono: true,
-          email: true,
-          direccion: true,
-          localidad: true,
-          codigoPostal: true,
-        },
-      },
+      clienteNombre: true,
+      clienteTelefono: true,
+      clienteDireccion: true,
+      clienteLocalidad: true,
       metodoPago: { select: { nombre: true } },
       usuario: { select: { name: true } },
       detalles: {
@@ -88,6 +86,7 @@ export async function obtenerPedido(
           id: true,
           productoId: true,
           nombreProducto: true,
+          unidadVenta: true,
           precioUnitario: true,
           cantidad: true,
           subtotal: true,
@@ -119,19 +118,27 @@ export async function obtenerPedido(
     estadoPago: pedido.estadoPago,
     tipoEntrega: pedido.tipoEntrega,
     direccionEntrega: pedido.direccionEntrega,
+    referenciaEntrega: pedido.referenciaEntrega,
+    mapsUrl: pedido.mapsUrl,
+    latitud: pedido.latitud === null ? null : Number(pedido.latitud),
+    longitud: pedido.longitud === null ? null : Number(pedido.longitud),
     subtotal: Number(pedido.subtotal),
     costoEnvio: Number(pedido.costoEnvio),
     total: Number(pedido.total),
     observaciones: pedido.observaciones,
-    cliente: pedido.cliente,
+    clienteNombre: pedido.clienteNombre,
+    clienteTelefono: pedido.clienteTelefono,
+    clienteDireccion: pedido.clienteDireccion,
+    clienteLocalidad: pedido.clienteLocalidad,
     metodoPago: pedido.metodoPago?.nombre ?? null,
     vendedor: pedido.usuario.name,
     detalles: pedido.detalles.map((detalle) => ({
       id: detalle.id,
       productoId: detalle.productoId,
       nombreProducto: detalle.nombreProducto,
+      unidadVenta: detalle.unidadVenta,
       precioUnitario: Number(detalle.precioUnitario),
-      cantidad: detalle.cantidad,
+      cantidad: Number(detalle.cantidad),
       subtotal: Number(detalle.subtotal),
     })),
     pagos: pedido.pagos.map((pago) => ({

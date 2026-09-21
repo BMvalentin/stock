@@ -22,6 +22,7 @@ export type PedidoListado = {
   createdAt: Date;
   cliente: string;
   telefono: string;
+  localidad: string | null;
   total: number;
   estado: EstadoPedido;
   estadoPago: EstadoPago;
@@ -55,8 +56,8 @@ export async function listarPedidos(
             ...(Number.isFinite(numeroBuscado) && filtros.busqueda !== ""
               ? [{ numero: numeroBuscado }]
               : []),
-            { cliente: { nombre: { contains: filtros.busqueda } } },
-            { cliente: { telefono: { contains: filtros.busqueda } } },
+            { clienteNombre: { contains: filtros.busqueda } },
+            { clienteTelefono: { contains: filtros.busqueda } },
           ],
         }
       : {}),
@@ -77,7 +78,9 @@ export async function listarPedidos(
         estado: true,
         estadoPago: true,
         tipoEntrega: true,
-        cliente: { select: { nombre: true, telefono: true } },
+        clienteNombre: true,
+        clienteTelefono: true,
+        clienteLocalidad: true,
         metodoPago: { select: { nombre: true } },
       },
     }),
@@ -89,8 +92,9 @@ export async function listarPedidos(
       id: pedido.id,
       numero: pedido.numero,
       createdAt: pedido.createdAt,
-      cliente: pedido.cliente.nombre,
-      telefono: pedido.cliente.telefono,
+      cliente: pedido.clienteNombre,
+      telefono: pedido.clienteTelefono,
+      localidad: pedido.clienteLocalidad,
       total: Number(pedido.total),
       estado: pedido.estado,
       estadoPago: pedido.estadoPago,

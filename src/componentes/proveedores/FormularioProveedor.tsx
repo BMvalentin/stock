@@ -16,6 +16,7 @@ export type ProveedorFormulario = {
   id: string;
   nombre: string;
   empresa: string | null;
+  cuit: string | null;
   telefono: string | null;
   whatsapp: string | null;
   email: string | null;
@@ -61,6 +62,14 @@ export function FormularioProveedor({
           name="empresa"
           defaultValue={proveedor?.empresa ?? ""}
           error={estado.errores?.empresa?.[0]}
+        />
+        <CampoTexto
+          etiqueta="CUIT/CUIL"
+          name="cuit"
+          inputMode="numeric"
+          defaultValue={proveedor?.cuit ?? ""}
+          ayuda="11 dígitos."
+          error={estado.errores?.cuit?.[0]}
         />
         <CampoTexto
           etiqueta="Teléfono"

@@ -19,6 +19,7 @@ import type {
   EstadoPedido,
 } from "@/generated/prisma/enums";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
+import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { BarraFiltros } from "@/componentes/ui/BarraFiltros";
 import { CampoBusqueda } from "@/componentes/ui/CampoBusqueda";
 import { SelectFiltro } from "@/componentes/ui/SelectFiltro";
@@ -31,7 +32,7 @@ export const metadata = { title: "Pedidos" };
 export default async function PaginaPedidos({
   searchParams,
 }: PageProps<"/pedidos">) {
-  await requerirSesion();
+  const usuario = await requerirSesion();
   const params = await searchParams;
 
   const busqueda = leerParametro(params.q);
@@ -71,6 +72,13 @@ export default async function PaginaPedidos({
       <EncabezadoPagina
         titulo="Pedidos"
         descripcion={`${resultado.total} pedido(s). El estado del pedido y el del pago son independientes.`}
+        acciones={
+          usuario.rol === "ADMIN" ? (
+            <EnlaceBoton href="/pedidos/nuevo" variante="primario">
+              Nuevo pedido
+            </EnlaceBoton>
+          ) : undefined
+        }
       />
 
       <BarraFiltros baseHref="/pedidos" limpiarHref="/pedidos">

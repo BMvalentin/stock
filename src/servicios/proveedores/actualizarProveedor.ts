@@ -24,6 +24,7 @@ export async function actualizarProveedor(
       data: {
         nombre: datos.nombre,
         empresa: datos.empresa ?? null,
+        cuit: datos.cuit ?? null,
         telefono: datos.telefono ?? null,
         whatsapp: datos.whatsapp ?? null,
         email: datos.email ?? null,

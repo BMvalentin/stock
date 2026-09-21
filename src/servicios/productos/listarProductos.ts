@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma/cliente";
 import type { Prisma } from "@/generated/prisma/client";
+import type { UnidadVenta } from "@/generated/prisma/enums";
 
 export type FiltrosProductos = {
   busqueda?: string;
@@ -23,10 +24,13 @@ export type ProductoListado = {
   id: string;
   nombre: string;
   sku: string;
+  barcode: string | null;
   activo: boolean;
+  unidadVenta: UnidadVenta;
   stockActual: number;
   stockMinimo: number;
   categoria: string;
+  imageUrl: string | null;
   precios: PrecioListado[];
   cantidadProveedores: number;
 };
@@ -52,6 +56,7 @@ function construirWhere(filtros: FiltrosProductos): Prisma.ProductoWhereInput {
           OR: [
             { nombre: { contains: filtros.busqueda } },
             { sku: { contains: filtros.busqueda } },
+            { barcode: { contains: filtros.busqueda } },
           ],
         }
       : {}),
@@ -101,9 +106,12 @@ export async function listarProductos(
         id: true,
         nombre: true,
         sku: true,
+        barcode: true,
         activo: true,
+        unidadVenta: true,
         stockActual: true,
         stockMinimo: true,
+        imageUrl: true,
         categoria: { select: { nombre: true } },
         precios: {
           select: {
@@ -123,10 +131,13 @@ export async function listarProductos(
       id: producto.id,
       nombre: producto.nombre,
       sku: producto.sku,
+      barcode: producto.barcode,
       activo: producto.activo,
-      stockActual: producto.stockActual,
-      stockMinimo: producto.stockMinimo,
+      unidadVenta: producto.unidadVenta,
+      stockActual: Number(producto.stockActual),
+      stockMinimo: Number(producto.stockMinimo),
       categoria: producto.categoria.nombre,
+      imageUrl: producto.imageUrl,
       precios: producto.precios.map((precio) => ({
         metodoPagoId: precio.metodoPagoId,
         metodo: precio.metodoPago.nombre,

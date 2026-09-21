@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Eye, Pencil, Power } from "lucide-react";
+import Image from "next/image";
+import { Eye, ImageOff, Pencil, Power } from "lucide-react";
 import type { ProductoListado } from "@/servicios/productos/listarProductos";
 import { accionCambiarEstadoProducto } from "@/acciones/productos/accionCambiarEstadoProducto";
 import { calcularEstadoStock } from "@/servicios/stock/calcularEstadoStock";
@@ -10,7 +11,9 @@ import {
   ETIQUETAS_ESTADO_STOCK,
   TONOS_ESTADO_STOCK,
 } from "@/constantes/estadoStock";
+import { TAMANO_MINIATURA_PRODUCTO } from "@/constantes/imagenes";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { urlImagenCloudinary } from "@/lib/utilidades/urlImagenCloudinary";
 import { TablaDatos } from "@/componentes/tablas/TablaDatos";
 import { MenuAcciones } from "@/componentes/ui/MenuAcciones";
 import { Etiqueta } from "@/componentes/ui/Etiqueta";
@@ -56,6 +59,7 @@ export function TablaProductos({
 
       <TablaDatos
         columnas={[
+          { encabezado: "Img" },
           { encabezado: "Producto" },
           { encabezado: "Categoría" },
           { encabezado: "Precios" },
@@ -72,6 +76,28 @@ export function TablaProductos({
           return {
             id: producto.id,
             celdas: [
+              producto.imageUrl ? (
+                <Image
+                  key="imagen"
+                  src={urlImagenCloudinary(
+                    producto.imageUrl,
+                    TAMANO_MINIATURA_PRODUCTO.ancho,
+                    TAMANO_MINIATURA_PRODUCTO.alto,
+                  )}
+                  alt={producto.nombre}
+                  width={TAMANO_MINIATURA_PRODUCTO.ancho}
+                  height={TAMANO_MINIATURA_PRODUCTO.alto}
+                  className="h-10 w-10 rounded-md border border-zinc-200 object-cover"
+                />
+              ) : (
+                <div
+                  key="imagen"
+                  className="flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-zinc-300"
+                  aria-hidden
+                >
+                  <ImageOff className="h-4 w-4" strokeWidth={1.5} />
+                </div>
+              ),
               <div key="producto" className="min-w-0">
                 <Link
                   href={`/productos/${producto.id}`}

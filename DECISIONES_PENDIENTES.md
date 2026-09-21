@@ -12,16 +12,29 @@ Estado: `RESUELTA` (ya implementada o acordada), `PENDIENTE` (requiere decisión
 | 1 | ¿Precios en tabla separada o columnas? | `PrecioProducto` (fila por producto y método de pago). |
 | 2 | ¿Un producto puede tener varios proveedores? | Sí, relación N:M. |
 | 3 | ¿Existe proveedor principal? | Sí, `ProductoProveedor.esPrincipal`. |
-| 4 | ¿Cliente es entidad independiente? | Sí, `Cliente` reutilizable. |
+| 4 | ¿Cliente es entidad independiente? | No. Los datos del comprador se congelan en `Pedido`. |
 | 5 | ¿Cómo se determina un bulto? | v1: `1 producto = 1 bulto`. Campo `unidadesPorBulto` para evolucionar. |
 | 6 | ¿Cuándo se descuenta stock? | Al pasar el pedido a `CONFIRMADO`. |
 | 7 | ¿Qué pasa si se cancela un pedido? | Si ya descontó stock, genera `DEVOLUCION` (una sola vez). |
 | 11 | ¿Quién puede cancelar pedidos? | Solo ADMIN. |
 | 12 | ¿Qué consulta un empleado? | Dashboard, Productos, Stock, Proveedores, Pedidos (lectura). |
-| 13 | ¿Qué datos de clientes ve un empleado? | Nombre, teléfono, dirección y localidad. |
+| 13 | ¿Qué datos del comprador ve un empleado? | Nombre, teléfono, dirección y localidad dentro del pedido. |
 | 14 | ¿Qué se congela en el pedido? | Nombre y precio unitario del producto, cantidades, subtotal, envío y total. |
 | 15 | ¿Qué eventos generan auditoría? | Altas/ediciones/desactivaciones, cambios de precio, movimientos de stock, pedidos, pagos y empleados. |
 | — | ¿Cómo levantar PostgreSQL? | Base de datos remota existente vía `DATABASE_URL`. |
+| 16 | ¿Medio de pago de proveedores: enum o tabla `MetodoPago`? | Enum propio `MetodoPagoProveedor`. `MetodoPago` representa cobros al cliente y no se reutiliza. |
+| 17 | ¿Datos de pago embebidos en `Proveedor` o entidad aparte? | Entidad `CuentaPagoProveedor` (1:N). Permite varias cuentas, principal y activas/inactivas. |
+| 18 | ¿El EMPLEADO ve datos bancarios del proveedor? | No. Se oculta la sección completa y el servidor no consulta las cuentas para ese rol (mínimo privilegio). |
+| 19 | ¿Qué pasa al desactivar la cuenta principal con otras activas? | Se bloquea hasta designar otra principal. Sin promociones silenciosas. |
+| 20 | ¿EFECTIVO exige alias/CBU/CVU? | No. El medio identifica el pago; el resto de los medios exigen al menos un identificador. |
+| 21 | ¿Se agrega CUIT al proveedor? | Sí, `Proveedor.cuit` opcional, normalizado a 11 dígitos. |
+| 22 | ¿Eliminación de cuentas de pago? | Baja lógica (`activo = false`); se conservan en el historial y pueden reactivarse. |
+| 23 | ¿Se muestran CBU/CVU completos? | No. Enmascarados en listados/tarjetas y en auditoría; completos solo en el detalle para ADMIN. |
+| 24 | ¿Cómo se vende un producto por unidad o por peso? | `Producto.unidadVenta` (`UNIDAD`/`KILOGRAMO`). El pedido congela `DetallePedido.unidadVenta`; el operador no puede cambiarla. |
+| 25 | ¿Qué precisión usan stock y cantidades? | `Decimal(12,3)` (hasta gramos). El dinero sigue en `Decimal(12,2)`. |
+| 26 | ¿Cuándo se descuenta el stock de un pedido? | Se valida al crear y se descuenta al pasar a `CONFIRMADO` (regla existente, con banderas de idempotencia). |
+| 27 | ¿Cómo se determina el precio de un pedido? | Método de pago obligatorio; el precio sale de `PrecioProducto` (producto + método) y se congela en `DetallePedido.precioUnitario`. |
+| 28 | ¿Cómo se guarda la ubicación de entrega? | `Pedido.mapsUrl` (URL de Google Maps validada) y `latitud`/`longitud` opcionales, con snapshot de dirección, localidad y referencia. Sin URL se genera una búsqueda con dirección + localidad. |
 
 ## Pendientes
 

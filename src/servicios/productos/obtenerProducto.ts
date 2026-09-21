@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma/cliente";
+import type { UnidadVenta } from "@/generated/prisma/enums";
 
 export type PrecioDetalle = {
   metodoPagoId: string;
@@ -18,12 +19,15 @@ export type ProductoDetalle = {
   nombre: string;
   descripcion: string | null;
   sku: string;
+  barcode: string | null;
   activo: boolean;
+  unidadVenta: UnidadVenta;
   stockActual: number;
   stockMinimo: number;
   unidadesPorBulto: number;
   categoriaId: string;
   categoria: string;
+  imageUrl: string | null;
   precios: PrecioDetalle[];
   proveedores: ProveedorDeProducto[];
 };
@@ -38,11 +42,14 @@ export async function obtenerProducto(
       nombre: true,
       descripcion: true,
       sku: true,
+      barcode: true,
       activo: true,
+      unidadVenta: true,
       stockActual: true,
       stockMinimo: true,
       unidadesPorBulto: true,
       categoriaId: true,
+      imageUrl: true,
       categoria: { select: { nombre: true } },
       precios: {
         select: {
@@ -67,12 +74,15 @@ export async function obtenerProducto(
     nombre: producto.nombre,
     descripcion: producto.descripcion,
     sku: producto.sku,
+    barcode: producto.barcode,
     activo: producto.activo,
-    stockActual: producto.stockActual,
-    stockMinimo: producto.stockMinimo,
+    unidadVenta: producto.unidadVenta,
+    stockActual: Number(producto.stockActual),
+    stockMinimo: Number(producto.stockMinimo),
     unidadesPorBulto: producto.unidadesPorBulto,
     categoriaId: producto.categoriaId,
     categoria: producto.categoria.nombre,
+    imageUrl: producto.imageUrl,
     precios: producto.precios.map((precio) => ({
       metodoPagoId: precio.metodoPagoId,
       metodo: precio.metodoPago.nombre,

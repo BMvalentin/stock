@@ -14,6 +14,8 @@ import { Alerta } from "@/componentes/ui/Alerta";
 import { TablaDatos } from "@/componentes/tablas/TablaDatos";
 import { EstadoVacio } from "@/componentes/ui/EstadoVacio";
 import { Dato } from "@/componentes/ui/Dato";
+import { SeccionDatosPago } from "@/componentes/proveedores/SeccionDatosPago";
+import { formatearCuit } from "@/lib/utilidades/formatearCuit";
 import {
   FormularioProveedor,
   type ProveedorFormulario,
@@ -44,6 +46,7 @@ export function DetalleProveedor({
     id: proveedor.id,
     nombre: proveedor.nombre,
     empresa: proveedor.empresa,
+    cuit: proveedor.cuit,
     telefono: proveedor.telefono,
     whatsapp: proveedor.whatsapp,
     email: proveedor.email,
@@ -114,6 +117,10 @@ export function DetalleProveedor({
           <dl className="mt-4 space-y-3 text-sm">
             <Dato etiqueta="Nombre" valor={proveedor.nombre} />
             <Dato etiqueta="Empresa" valor={proveedor.empresa} />
+            <Dato
+              etiqueta="CUIT/CUIL"
+              valor={formatearCuit(proveedor.cuit) || null}
+            />
             <Dato etiqueta="Teléfono" valor={proveedor.telefono} />
             <Dato etiqueta="WhatsApp" valor={proveedor.whatsapp} />
             <Dato etiqueta="Correo" valor={proveedor.email} />
@@ -166,6 +173,13 @@ export function DetalleProveedor({
           )}
         </div>
       </div>
+
+      {esAdmin ? (
+        <SeccionDatosPago
+          proveedorId={proveedor.id}
+          cuentas={proveedor.cuentasPago}
+        />
+      ) : null}
 
       <Modal
         abierto={modalAbierto}

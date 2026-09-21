@@ -24,7 +24,11 @@ export default async function PaginaProveedores({
       ? estadoCrudo
       : "TODOS";
 
-  const proveedores = await listarProveedores({ busqueda, estado });
+  const proveedores = await listarProveedores({
+    busqueda,
+    estado,
+    incluirCuentaPago: usuario.rol === "ADMIN",
+  });
 
   return (
     <div className="space-y-6">

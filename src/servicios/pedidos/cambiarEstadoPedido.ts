@@ -8,6 +8,9 @@ import type { EstadoPedido } from "@/generated/prisma/enums";
 // Cambia el estado del pedido respetando la máquina de estados. Al confirmar
 // descuenta stock (una sola vez) y al cancelar un pedido ya descontado genera
 // la devolución (una sola vez). Usa las banderas de idempotencia del pedido.
+//
+// El descuento es atómico: la condición `stockActual >= cantidad` evita stock
+// negativo cuando dos pedidos compiten por el mismo producto.
 export async function cambiarEstadoPedido(
   pedidoId: string,
   nuevoEstado: EstadoPedido,
@@ -58,25 +61,34 @@ export async function cambiarEstadoPedido(
           );
         }
 
-        if (producto.stockActual < detalle.cantidad) {
+        const aplicado = await tx.producto.updateMany({
+          where: {
+            id: detalle.productoId,
+            stockActual: { gte: detalle.cantidad },
+          },
+          data: { stockActual: { decrement: detalle.cantidad } },
+        });
+
+        if (aplicado.count === 0) {
           throw new ErrorNegocio(
-            `Stock insuficiente de ${detalle.nombreProducto}. Disponible: ${producto.stockActual}.`,
+            `No hay stock suficiente de ${detalle.nombreProducto}. Disponible: ${producto.stockActual.toString()}.`,
           );
         }
 
-        const stockPosterior = producto.stockActual - detalle.cantidad;
-
-        await tx.producto.update({
+        const actualizado = await tx.producto.findUniqueOrThrow({
           where: { id: detalle.productoId },
-          data: { stockActual: stockPosterior },
+          select: { stockActual: true },
         });
+
+        const stockPosterior = actualizado.stockActual;
+        const stockAnterior = stockPosterior.add(detalle.cantidad);
 
         await tx.movimientoStock.create({
           data: {
             productoId: detalle.productoId,
             tipo: "VENTA",
             cantidad: detalle.cantidad,
-            stockAnterior: producto.stockActual,
+            stockAnterior,
             stockPosterior,
             usuarioId,
             pedidoId: pedido.id,
@@ -101,19 +113,25 @@ export async function cambiarEstadoPedido(
 
         if (!producto) continue;
 
-        const stockPosterior = producto.stockActual + detalle.cantidad;
-
         await tx.producto.update({
           where: { id: detalle.productoId },
-          data: { stockActual: stockPosterior },
+          data: { stockActual: { increment: detalle.cantidad } },
         });
+
+        const actualizado = await tx.producto.findUniqueOrThrow({
+          where: { id: detalle.productoId },
+          select: { stockActual: true },
+        });
+
+        const stockPosterior = actualizado.stockActual;
+        const stockAnterior = stockPosterior.sub(detalle.cantidad);
 
         await tx.movimientoStock.create({
           data: {
             productoId: detalle.productoId,
             tipo: "DEVOLUCION",
             cantidad: detalle.cantidad,
-            stockAnterior: producto.stockActual,
+            stockAnterior,
             stockPosterior,
             usuarioId,
             pedidoId: pedido.id,

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Pencil } from "lucide-react";
 import { requerirSesion } from "@/lib/seguridad/requerirSesion";
 import { obtenerProducto } from "@/servicios/productos/obtenerProducto";
@@ -16,6 +17,8 @@ import {
 } from "@/constantes/tiposMovimiento";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
 import { formatearFechaHora } from "@/lib/utilidades/formatearFechaHora";
+import { urlImagenCloudinary } from "@/lib/utilidades/urlImagenCloudinary";
+import { TAMANO_DETALLE_PRODUCTO } from "@/constantes/imagenes";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { Tarjeta } from "@/componentes/ui/Tarjeta";
@@ -84,9 +87,23 @@ export default async function PaginaDetalleProducto({
               {producto.activo ? "Activo" : "Inactivo"}
             </Etiqueta>
           </div>
+          {producto.imageUrl ? (
+            <Image
+              src={urlImagenCloudinary(
+                producto.imageUrl,
+                TAMANO_DETALLE_PRODUCTO.ancho,
+                TAMANO_DETALLE_PRODUCTO.alto,
+              )}
+              alt={`Imagen de ${producto.nombre}`}
+              width={TAMANO_DETALLE_PRODUCTO.ancho}
+              height={TAMANO_DETALLE_PRODUCTO.alto}
+              className="mt-4 h-40 w-40 rounded-md border border-zinc-200 object-cover"
+            />
+          ) : null}
           <dl className="mt-4 space-y-3 text-sm">
             <Dato etiqueta="Categoría" valor={producto.categoria} />
             <Dato etiqueta="SKU" valor={producto.sku} />
+            <Dato etiqueta="Código de barras" valor={producto.barcode} />
             <Dato
               etiqueta="Unidades por bulto"
               valor={producto.unidadesPorBulto}

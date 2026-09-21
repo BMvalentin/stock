@@ -14,7 +14,6 @@ implementar y auditar el sistema.
 | Stock | ingresos/egresos/ajustes | solo lectura |
 | Movimientos | consultar/filtrar | sin acceso |
 | Pedidos | crear/editar/estados/pagos | solo lectura |
-| Clientes | crear/editar/desactivar | sin acceso (ve datos mínimos dentro del pedido) |
 | Reportes | completo | sin acceso |
 | Empleados | crear/desactivar | sin acceso |
 | Configuración | completo | sin acceso |
@@ -26,8 +25,8 @@ Reglas:
   `requerirAdmin`). Ocultar botones no autoriza.
 - El EMPLEADO tiene acceso de **solo lectura** a Dashboard, Productos, Stock,
   Proveedores y Pedidos.
-- Dentro de un pedido, el EMPLEADO ve del cliente solo `nombre`, `teléfono`,
-  `dirección` y `localidad`.
+- Dentro de un pedido, el EMPLEADO ve solo `nombre`, `teléfono`, `dirección` y
+  `localidad` del comprador.
 
 ## Stock
 
@@ -38,6 +37,11 @@ Reglas:
 - Cada movimiento registra: producto, tipo, cantidad, stock anterior, stock
   posterior, usuario, motivo, pedido opcional y fecha.
 - `stockActual` nunca puede quedar por debajo de 0. No se admite `stock = -1`.
+- `stockActual`, `stockMinimo`, las cantidades de `MovimientoStock` y las
+  cantidades de pedido usan `Decimal(12,3)` para admitir venta por peso (kg).
+- El descuento por venta usa una actualización condicional
+  (`stockActual >= cantidad`): dos pedidos concurrentes no pueden dejar stock
+  negativo.
 - Operaciones de stock y dinero se ejecutan en `prisma.$transaction`.
 - Las operaciones son **idempotentes** (ver "Idempotencia").
 
@@ -45,6 +49,9 @@ Reglas:
 
 - Los precios viven en la tabla `PrecioProducto` (una fila por producto y método
   de pago). No se hardcodean columnas como "precioEfectivo"/"precioTransferencia".
+- La modalidad de venta vive en `Producto.unidadVenta` (`UNIDAD` o `KILOGRAMO`) y
+  define cómo se interpreta el precio: por unidad o por kilogramo. Es propiedad
+  del producto; no se elige al vender.
 - Métodos iniciales: `EFECTIVO`, `TRANSFERENCIA`. La tabla `MetodoPago` permite
   agregar tarjeta, Mercado Pago, financiación, etc. sin migrar el esquema.
 - Al crear un pedido, el precio usado se **congela** en `DetallePedido.precioUnitario`.
@@ -69,6 +76,31 @@ PENDIENTE → CONFIRMADO → PREPARANDO → LISTO → ENTREGADO
 - El pedido guarda datos del cliente y detalles con nombre y precio congelados.
 - `estadoPedido` y `estadoPago` son independientes: un pedido entregado puede
   estar impago y viceversa.
+
+### Creación y cálculo
+
+- Solo un ADMIN crea pedidos (el EMPLEADO tiene lectura).
+- El cliente no define precios, subtotales ni total: envía producto y cantidad.
+  El servidor resuelve el precio de `PrecioProducto` según el método de pago
+  elegido (obligatorio) y calcula subtotales, envío y total.
+- Cada línea congela `nombreProducto`, `unidadVenta`, `precioUnitario`,
+  `cantidad` y `subtotal` en `DetallePedido`.
+- Cantidades: por unidad deben ser enteras; por kilogramo admiten hasta 3
+  decimales. Se rechazan cantidades cero o negativas.
+- No se repite un producto: si se agrega dos veces, se suma la cantidad.
+- El envío se calcula con el servicio de envío (nunca en el componente). El
+  retiro en el local no tiene costo.
+- Al crear se valida el stock disponible. El descuento real ocurre al confirmar
+  (ver "Stock y pedidos").
+
+### Entrega y ubicación
+
+- El pedido guarda un snapshot de entrega: dirección, localidad, referencia
+  opcional, `mapsUrl` y coordenadas opcionales.
+- `mapsUrl` debe ser una URL HTTPS de Google Maps; se rechazan esquemas
+  peligrosos (`javascript:`, etc.).
+- El botón "Abrir ubicación" usa `mapsUrl`; si no existe, genera una búsqueda
+  con dirección + localidad. No se inventan coordenadas.
 
 ### Stock y pedidos
 
@@ -108,13 +140,46 @@ Estados: `PENDIENTE`, `AVISADO`, `CONFIRMADO`, `RECHAZADO`.
 - Contacto directo: llamada (`telefono`), WhatsApp (`whatsapp`) y email.
 - El enlace de WhatsApp se genera a partir del número almacenado.
 - No existe chat interno con proveedores.
+- `Proveedor.cuit` (opcional) se normaliza a 11 dígitos.
 
-## Clientes
+### Datos/cuentas de pago del proveedor
 
-- `Cliente` es una entidad independiente reutilizable entre pedidos.
-- Campos: nombre, teléfono, email (opcional), dirección, localidad, código
-  postal, observaciones.
-- Búsqueda principal por teléfono para evitar duplicados.
+- Relación `Proveedor 1 — N CuentaPagoProveedor`. Un proveedor puede existir
+  sin cuentas de pago; no se bloquea su alta, edición ni la asociación de
+  productos.
+- El medio de pago usa el enum `MetodoPagoProveedor`
+  (`TRANSFERENCIA_BANCARIA`, `TRANSFERENCIA_CVU`, `MERCADO_PAGO`, `EFECTIVO`,
+  `OTRO`). Es independiente de la tabla `MetodoPago` (cobros al cliente).
+- `TipoCuentaProveedor`: `CAJA_AHORRO`, `CUENTA_CORRIENTE`, `CUENTA_VIRTUAL`,
+  `OTRA` (opcional).
+- Debe existir al menos un identificador de pago: `alias`, `cbu` o `cvu`.
+  Excepción: `EFECTIVO`, que no requiere datos bancarios.
+- `CBU` y `CVU` se guardan solo con dígitos (22). `titularCuit` se guarda con
+  11 dígitos. `alias`, `titular` y `banco` se recortan y colapsan espacios.
+- Cuenta principal: `esPrincipal`. Un proveedor tiene como máximo **una**
+  cuenta principal activa; se garantiza en el servidor con una transacción que
+  quita la marca de las demás antes de marcarla.
+- Una cuenta inactiva (`activo = false`) no puede ser principal. Desactivar una
+  cuenta principal con otras cuentas activas se bloquea hasta designar otra
+  principal.
+- Baja lógica: las cuentas no se eliminan físicamente; se desactivan y pueden
+  reactivarse, conservando el historial.
+- Datos sensibles: `CBU`/`CVU` se muestran enmascarados en listados y tarjetas
+  resumidas, y **nunca** completos en la auditoría. El EMPLEADO no accede a la
+  sección de datos de pago.
+- Auditoría: `CUENTA_PAGO_PROVEEDOR_CREADA`, `..._EDITADA`,
+  `..._PRINCIPAL_CAMBIADA`, `..._ACTIVADA`, `..._DESACTIVADA`.
+
+## Comprador en pedidos
+
+- No existe un módulo independiente de clientes.
+- Los datos del comprador se congelan en `Pedido`: `clienteNombre`,
+  `clienteTelefono`, `clienteDireccion` y `clienteLocalidad`.
+- La entrega también se congela: `direccionEntrega`, `referenciaEntrega`,
+  `mapsUrl`, `latitud` y `longitud`. Si el cliente cambia de domicilio, el
+  pedido histórico no se modifica.
+- Se muestran únicamente como parte del pedido; no hay historial ni perfil de
+  clientes.
 
 ## Auditoría
 

@@ -38,7 +38,7 @@ export async function obtenerProductosMasVendidos(
   return agrupado.map((fila) => ({
     productoId: fila.productoId,
     nombre: nombres.get(fila.productoId) ?? "Producto",
-    cantidad: fila._sum.cantidad ?? 0,
+    cantidad: Number(fila._sum.cantidad ?? 0),
     total: Number(fila._sum.subtotal ?? 0),
   }));
 }

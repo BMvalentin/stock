@@ -23,9 +23,9 @@ Server Action  →  validación Zod → requerirSesion/requerirAdmin
         ↓
 Servicio (reglas de negocio, cálculos, transacciones)
         ↓
-Prisma Client (driver adapter pg)
+Prisma Client (driver adapter MariaDB/MySQL)
         ↓
-PostgreSQL
+TiDB Cloud (protocolo MySQL)
 ```
 
 Reglas de dependencia:
@@ -54,7 +54,8 @@ src/
 │   │   ├── stock/page.tsx
 │   │   ├── movimientos/page.tsx
 │   │   ├── pedidos/page.tsx
-│   │   ├── clientes/page.tsx
+│   │   ├── pedidos/nuevo/page.tsx
+│   │   ├── pedidos/[id]/page.tsx
 │   │   ├── reportes/page.tsx
 │   │   ├── empleados/page.tsx
 │   │   ├── configuracion/page.tsx
@@ -112,3 +113,20 @@ src/
 Ver `.env.example`. `DATABASE_URL` y `AUTH_SECRET` son obligatorias.
 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` son opcionales: si faltan, el
 proveedor de Google no se registra y el botón no se muestra.
+
+## Módulo de pedidos
+
+- Los pedidos se crean desde `/pedidos/nuevo` (solo ADMIN) y se administran en
+  `/pedidos` y `/pedidos/[id]`.
+- La creación se orquesta en `servicios/pedidos/crearPedido`, que reutiliza
+  `calcularTotalesPedido` (precios con `Prisma.Decimal`), `validarStockPedido` y
+  `calcularCostoEnvio` (sobre `ConfiguracionEnvio`). El cliente nunca fija
+  precios ni totales.
+- Modalidad de venta por producto (`Producto.unidadVenta`): `UNIDAD` o
+  `KILOGRAMO`. El pedido congela la modalidad en `DetallePedido.unidadVenta`.
+- Precisión: stock y cantidades en `Decimal(12,3)`; dinero en `Decimal(12,2)`.
+- Entrega: snapshot en `Pedido` (dirección, localidad, referencia, `mapsUrl`,
+  `latitud`, `longitud`). La URL de Maps se valida en
+  `lib/validaciones/ubicacion` (extensible a otros proveedores).
+- El stock se valida al crear y se descuenta al pasar a `CONFIRMADO` con una
+  actualización condicional (sin stock negativo en concurrencia).

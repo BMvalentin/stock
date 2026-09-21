@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tieneMaximoTresDecimales } from "@/lib/utilidades/tieneMaximoTresDecimales";
 
 export const esquemaMovimiento = z.object({
   productoId: z.string().min(1, "Seleccioná un producto"),
@@ -8,8 +9,8 @@ export const esquemaMovimiento = z.object({
   ),
   cantidad: z.coerce
     .number()
-    .int("Debe ser un número entero")
-    .positive("Debe ser mayor a cero"),
+    .positive("Debe ser mayor a cero")
+    .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
   motivo: z
     .string()
     .trim()

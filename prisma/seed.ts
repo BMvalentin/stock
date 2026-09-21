@@ -150,19 +150,6 @@ async function sembrarCatalogo(
   }
 }
 
-async function sembrarClientes(): Promise<void> {
-  const clientes = [
-    { nombre: "María González", telefono: "+5491145550101", email: "maria@correo.com", direccion: "Av. Siempre Viva 742", localidad: "CABA" },
-    { nombre: "Jorge Ramírez", telefono: "+5491145550102", email: "jorge@correo.com", direccion: "Calle Falsa 123", localidad: "Lanús" },
-    { nombre: "Lucía Fernández", telefono: "+5491145550103", email: null, direccion: null, localidad: "San Isidro" },
-    { nombre: "Carlos Pérez", telefono: "+5491145550104", email: "carlos@correo.com", direccion: "Belgrano 456", localidad: "Quilmes" },
-  ];
-
-  for (const cliente of clientes) {
-    await prisma.cliente.create({ data: cliente });
-  }
-}
-
 async function sembrarMovimientosIniciales(): Promise<void> {
   const admin = await prisma.user.findFirstOrThrow({ where: { rol: "ADMIN" } });
   const productos = await prisma.producto.findMany({
@@ -170,7 +157,7 @@ async function sembrarMovimientosIniciales(): Promise<void> {
   });
 
   for (const producto of productos) {
-    if (producto.stockActual <= 0) continue;
+    if (Number(producto.stockActual) <= 0) continue;
 
     await prisma.movimientoStock.create({
       data: {
@@ -188,26 +175,28 @@ async function sembrarMovimientosIniciales(): Promise<void> {
 
 async function sembrarPedidosDemo(): Promise<void> {
   const admin = await prisma.user.findFirstOrThrow({ where: { rol: "ADMIN" } });
-  const clientes = await prisma.cliente.findMany({
-    take: 3,
-    orderBy: { createdAt: "asc" },
-  });
   const productos = await prisma.producto.findMany({
     where: { sku: { in: ["BEB-COCA-225", "ALM-YERBA-1K", "LIM-DETER-750"] } },
     include: { precios: true },
   });
 
-  if (clientes.length === 0 || productos.length === 0) return;
+  if (productos.length === 0) return;
 
   const pedidos: Array<{
-    clienteId: string;
+    clienteNombre: string;
+    clienteTelefono: string;
+    clienteDireccion: string | null;
+    clienteLocalidad: string | null;
     estado: EstadoPedido;
     estadoPago: EstadoPago;
     descuentaStock: boolean;
     items: Array<{ sku: string; cantidad: number }>;
   }> = [
     {
-      clienteId: clientes[0].id,
+      clienteNombre: "María González",
+      clienteTelefono: "+5491145550101",
+      clienteDireccion: "Av. Siempre Viva 742",
+      clienteLocalidad: "CABA",
       estado: "ENTREGADO",
       estadoPago: "CONFIRMADO",
       descuentaStock: true,
@@ -217,14 +206,20 @@ async function sembrarPedidosDemo(): Promise<void> {
       ],
     },
     {
-      clienteId: clientes[1].id,
+      clienteNombre: "Jorge Ramírez",
+      clienteTelefono: "+5491145550102",
+      clienteDireccion: "Calle Falsa 123",
+      clienteLocalidad: "Lanús",
       estado: "CONFIRMADO",
       estadoPago: "AVISADO",
       descuentaStock: true,
       items: [{ sku: "LIM-DETER-750", cantidad: 3 }],
     },
     {
-      clienteId: clientes[2 % clientes.length].id,
+      clienteNombre: "Lucía Fernández",
+      clienteTelefono: "+5491145550103",
+      clienteDireccion: null,
+      clienteLocalidad: "San Isidro",
       estado: "PENDIENTE",
       estadoPago: "PENDIENTE",
       descuentaStock: false,
@@ -241,6 +236,7 @@ async function sembrarPedidosDemo(): Promise<void> {
       return {
         productoId: producto?.id ?? "",
         nombreProducto: producto?.nombre ?? "",
+        unidadVenta: "UNIDAD" as const,
         precioUnitario: precioNumero,
         cantidad: item.cantidad,
         subtotal: precioNumero * item.cantidad,
@@ -250,7 +246,10 @@ async function sembrarPedidosDemo(): Promise<void> {
     const subtotal = items.reduce((total, item) => total + item.subtotal, 0);
     const pedido = await prisma.pedido.create({
       data: {
-        clienteId: datos.clienteId,
+        clienteNombre: datos.clienteNombre,
+        clienteTelefono: datos.clienteTelefono,
+        clienteDireccion: datos.clienteDireccion,
+        clienteLocalidad: datos.clienteLocalidad,
         usuarioId: admin.id,
         estado: datos.estado,
         estadoPago: datos.estadoPago,
@@ -270,7 +269,7 @@ async function sembrarPedidosDemo(): Promise<void> {
         select: { stockActual: true },
       });
       const stockAnterior = producto.stockActual;
-      const stockPosterior = Math.max(0, stockAnterior - item.cantidad);
+      const stockPosterior = Math.max(0, Number(stockAnterior) - item.cantidad);
 
       await prisma.movimientoStock.create({
         data: {
@@ -298,7 +297,6 @@ async function main(): Promise<void> {
   const idsMetodosPago = await sembrarMetodosPago();
   await sembrarConfiguracion();
   await sembrarCatalogo(idsMetodosPago);
-  await sembrarClientes();
   await sembrarMovimientosIniciales();
   await sembrarPedidosDemo();
 

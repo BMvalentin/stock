@@ -36,6 +36,7 @@ export async function listarStock(
           OR: [
             { nombre: { contains: filtros.busqueda } },
             { sku: { contains: filtros.busqueda } },
+            { barcode: { contains: filtros.busqueda } },
           ],
         }
       : {}),
@@ -81,8 +82,8 @@ export async function listarStock(
       nombre: producto.nombre,
       sku: producto.sku,
       categoria: producto.categoria.nombre,
-      stockActual: producto.stockActual,
-      stockMinimo: producto.stockMinimo,
+      stockActual: Number(producto.stockActual),
+      stockMinimo: Number(producto.stockMinimo),
       actualizado: producto.updatedAt,
     })),
   };

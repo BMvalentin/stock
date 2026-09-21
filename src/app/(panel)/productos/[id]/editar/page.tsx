@@ -4,6 +4,7 @@ import { obtenerProducto } from "@/servicios/productos/obtenerProducto";
 import { listarCategoriasActivas } from "@/servicios/categorias/listarCategoriasActivas";
 import { listarMetodosPagoActivos } from "@/servicios/metodosPago/listarMetodosPagoActivos";
 import { listarProveedoresActivos } from "@/servicios/proveedores/listarProveedoresActivos";
+import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerConfiguracionGeneral";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { FormularioProducto } from "@/componentes/productos/FormularioProducto";
 
@@ -15,12 +16,14 @@ export default async function PaginaEditarProducto({
   await requerirAdmin();
   const { id } = await params;
 
-  const [producto, categorias, metodosPago, proveedores] = await Promise.all([
-    obtenerProducto(id),
-    listarCategoriasActivas(),
-    listarMetodosPagoActivos(),
-    listarProveedoresActivos(),
-  ]);
+  const [producto, configuracion, categorias, metodosPago, proveedores] =
+    await Promise.all([
+      obtenerProducto(id),
+      obtenerConfiguracionGeneral(),
+      listarCategoriasActivas(),
+      listarMetodosPagoActivos(),
+      listarProveedoresActivos(),
+    ]);
 
   if (!producto) notFound();
 
@@ -35,6 +38,8 @@ export default async function PaginaEditarProducto({
         categorias={categorias}
         metodosPago={metodosPago}
         proveedores={proveedores}
+        moneda={configuracion.moneda}
+        locale={configuracion.locale}
       />
     </div>
   );

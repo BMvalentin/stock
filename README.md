@@ -1,7 +1,7 @@
 # Sistema de Gestión de Stock, Productos y Pedidos
 
 Aplicación web interna para administrar productos, categorías, stock,
-proveedores, movimientos, pedidos, pagos, envíos, clientes, empleados,
+proveedores, movimientos, pedidos, pagos, envíos, empleados,
 reportes y auditoría de un comercio.
 
 ## Stack

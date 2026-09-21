@@ -5,6 +5,7 @@ import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
 export type DatosProveedor = {
   nombre: string;
   empresa?: string;
+  cuit?: string;
   telefono?: string;
   whatsapp?: string;
   email?: string;
@@ -21,6 +22,7 @@ export async function crearProveedor(
       data: {
         nombre: datos.nombre,
         empresa: datos.empresa ?? null,
+        cuit: datos.cuit ?? null,
         telefono: datos.telefono ?? null,
         whatsapp: datos.whatsapp ?? null,
         email: datos.email ?? null,

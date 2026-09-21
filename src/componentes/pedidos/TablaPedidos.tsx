@@ -27,6 +27,7 @@ export function TablaPedidos({
       columnas={[
         { encabezado: "Pedido" },
         { encabezado: "Cliente" },
+        { encabezado: "Localidad" },
         { encabezado: "Fecha" },
         { encabezado: "Entrega" },
         { encabezado: "Pago" },
@@ -48,6 +49,9 @@ export function TablaPedidos({
             <p className="truncate text-sm text-zinc-800">{pedido.cliente}</p>
             <p className="truncate text-xs text-zinc-500">{pedido.telefono}</p>
           </div>,
+          <span key="localidad" className="truncate text-xs text-zinc-600">
+            {pedido.localidad ?? "—"}
+          </span>,
           <span key="fecha" className="whitespace-nowrap text-xs text-zinc-500">
             {formatearFechaHora(pedido.createdAt, locale)}
           </span>,

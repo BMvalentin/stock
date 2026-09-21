@@ -11,7 +11,7 @@ import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerCo
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { BarraFiltros } from "@/componentes/ui/BarraFiltros";
-import { CampoBusqueda } from "@/componentes/ui/CampoBusqueda";
+import { BuscadorProductos } from "@/componentes/productos/BuscadorProductos";
 import { SelectFiltro } from "@/componentes/ui/SelectFiltro";
 import { Paginacion } from "@/componentes/ui/Paginacion";
 import { TablaProductos } from "@/componentes/productos/TablaProductos";
@@ -88,11 +88,7 @@ export default async function PaginaProductos({
       />
 
       <BarraFiltros baseHref="/productos" limpiarHref="/productos">
-        <CampoBusqueda
-          valorInicial={busqueda}
-          placeholder="Buscar por nombre o SKU"
-          className="w-full sm:w-64"
-        />
+        <BuscadorProductos valorInicial={busqueda} />
         <SelectFiltro
           nombre="categoria"
           valorInicial={categoriaId}

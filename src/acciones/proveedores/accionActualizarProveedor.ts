@@ -18,6 +18,7 @@ export async function accionActualizarProveedor(
   const resultado = esquemaProveedor.safeParse({
     nombre: formData.get("nombre"),
     empresa: formData.get("empresa"),
+    cuit: formData.get("cuit"),
     telefono: formData.get("telefono"),
     whatsapp: formData.get("whatsapp"),
     email: formData.get("email"),

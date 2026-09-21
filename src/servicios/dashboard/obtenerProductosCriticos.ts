@@ -36,7 +36,7 @@ export async function obtenerProductosCriticos(
     nombre: producto.nombre,
     sku: producto.sku,
     categoria: producto.categoria.nombre,
-    stockActual: producto.stockActual,
-    stockMinimo: producto.stockMinimo,
+    stockActual: Number(producto.stockActual),
+    stockMinimo: Number(producto.stockMinimo),
   }));
 }

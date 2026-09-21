@@ -24,14 +24,14 @@ export async function obtenerPedidosRecientes(
       estado: true,
       estadoPago: true,
       createdAt: true,
-      cliente: { select: { nombre: true } },
+      clienteNombre: true,
     },
   });
 
   return pedidos.map((pedido) => ({
     id: pedido.id,
     numero: pedido.numero,
-    cliente: pedido.cliente.nombre,
+    cliente: pedido.clienteNombre,
     total: Number(pedido.total),
     estado: pedido.estado,
     estadoPago: pedido.estadoPago,

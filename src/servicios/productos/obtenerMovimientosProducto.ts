@@ -35,9 +35,9 @@ export async function obtenerMovimientosProducto(
   return movimientos.map((movimiento) => ({
     id: movimiento.id,
     tipo: movimiento.tipo,
-    cantidad: movimiento.cantidad,
-    stockAnterior: movimiento.stockAnterior,
-    stockPosterior: movimiento.stockPosterior,
+    cantidad: Number(movimiento.cantidad),
+    stockAnterior: Number(movimiento.stockAnterior),
+    stockPosterior: Number(movimiento.stockPosterior),
     motivo: movimiento.motivo,
     usuario: movimiento.usuario.name,
     createdAt: movimiento.createdAt,

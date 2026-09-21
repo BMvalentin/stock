@@ -91,3 +91,32 @@ durante una auditoría salvo que la fase lo solicite.
 3. Implementar FASE 3 (productos y categorías) con transacciones y auditoría.
 4. Agregar rate limiting en el login.
 5. Incorporar tests de las reglas de negocio críticas.
+
+## Actualizaciones posteriores
+
+### Cuentas de pago de proveedores
+
+- Nueva entidad `CuentaPagoProveedor` (relación 1:N con `Proveedor`) y enums
+  `MetodoPagoProveedor` / `TipoCuentaProveedor`. Migración
+  `0003_cuentas_pago_proveedor`.
+- Acciones de auditoría: `CUENTA_PAGO_PROVEEDOR_CREADA`,
+  `CUENTA_PAGO_PROVEEDOR_EDITADA`, `CUENTA_PAGO_PROVEEDOR_PRINCIPAL_CAMBIADA`,
+  `CUENTA_PAGO_PROVEEDOR_ACTIVADA`, `CUENTA_PAGO_PROVEEDOR_DESACTIVADA`.
+- La metadata de auditoría guarda CBU/CVU **enmascarados**; nunca completos.
+- Los datos de pago solo se consultan y muestran para `ADMIN`.
+
+### Módulo de pedidos
+
+- Migración `0004_pedidos_unidad_venta_y_entrega` (no destructiva):
+  `Producto.unidadVenta`, `Producto.stockActual`/`stockMinimo`,
+  `MovimientoStock` (cantidad y saldos) y `DetallePedido.cantidad` pasan a
+  `Decimal(12,3)`; `DetallePedido.unidadVenta`; `Pedido.referenciaEntrega`,
+  `mapsUrl`, `latitud`, `longitud`.
+- Nueva creación de pedidos: `/pedidos/nuevo`, `crearPedido`,
+  `calcularTotalesPedido`, `validarStockPedido`, `calcularCostoEnvio`,
+  `buscarProductosParaPedido` y las acciones `accionCrearPedido`,
+  `accionBuscarProductosPedido`, `accionCalcularResumenPedido`.
+- El descuento de stock al confirmar usa actualización condicional
+  (`stockActual >= cantidad`) para evitar stock negativo en concurrencia.
+- Auditoría `PEDIDO_CREADO` con metadata: número, cantidad de productos, total,
+  método de pago y tipo de entrega. No se duplica información personal.

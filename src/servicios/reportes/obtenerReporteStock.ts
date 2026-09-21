@@ -28,6 +28,6 @@ export async function obtenerReporteStock(): Promise<ReporteStock> {
     productosActivos,
     sinStock,
     stockBajo,
-    unidadesTotales: unidades._sum.stockActual ?? 0,
+    unidadesTotales: Number(unidades._sum.stockActual ?? 0),
   };
 }

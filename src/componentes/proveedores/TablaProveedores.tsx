@@ -11,6 +11,7 @@ import { Boton } from "@/componentes/ui/Boton";
 import { Modal } from "@/componentes/ui/Modal";
 import { Alerta } from "@/componentes/ui/Alerta";
 import { EstadoVacio } from "@/componentes/ui/EstadoVacio";
+import { formatearCuit } from "@/lib/utilidades/formatearCuit";
 import {
   FormularioProveedor,
   type ProveedorFormulario,
@@ -66,6 +67,12 @@ export function TablaProveedores({
           columnas={[
             { encabezado: "Proveedor" },
             { encabezado: "Contacto" },
+            ...(esAdmin
+              ? [
+                  { encabezado: "CUIT/CUIL" },
+                  { encabezado: "Cuenta de pago principal" },
+                ]
+              : []),
             { encabezado: "Productos", alineacion: "centro" },
             { encabezado: "Estado" },
             { encabezado: "", alineacion: "der" },
@@ -92,6 +99,44 @@ export function TablaProveedores({
                   <span className="text-zinc-400">Sin datos</span>
                 ) : null}
               </div>,
+              ...(esAdmin
+                ? [
+                    <span
+                      key="cuit"
+                      className="whitespace-nowrap text-xs text-zinc-600"
+                    >
+                      {formatearCuit(proveedor.cuit) || (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </span>,
+                    <div key="cuenta" className="min-w-0 text-xs text-zinc-600">
+                      {proveedor.cuentaPrincipal ? (
+                        <>
+                          {proveedor.cuentaPrincipal.banco ||
+                          proveedor.cuentaPrincipal.alias ? (
+                            <p className="truncate">
+                              {[
+                                proveedor.cuentaPrincipal.banco,
+                                proveedor.cuentaPrincipal.alias,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          ) : null}
+                          {proveedor.cuentaPrincipal.cbuEnmascarado ||
+                          proveedor.cuentaPrincipal.cvuEnmascarado ? (
+                            <p className="truncate text-zinc-400">
+                              {proveedor.cuentaPrincipal.cbuEnmascarado ??
+                                proveedor.cuentaPrincipal.cvuEnmascarado}
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="text-zinc-400">Sin datos</span>
+                      )}
+                    </div>,
+                  ]
+                : []),
               <span key="productos" className="text-sm text-zinc-600">
                 {proveedor.cantidadProductos}
               </span>,

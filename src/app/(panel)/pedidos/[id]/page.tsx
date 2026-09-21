@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Phone } from "lucide-react";
 import { requerirSesion } from "@/lib/seguridad/requerirSesion";
 import { obtenerPedido } from "@/servicios/pedidos/obtenerPedido";
 import { estadosSiguientesPedido } from "@/servicios/pedidos/estadosSiguientesPedido";
@@ -13,7 +14,9 @@ import {
   TONOS_ESTADO_PAGO,
 } from "@/constantes/estadosPago";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { formatearCantidad } from "@/lib/utilidades/formatearCantidad";
 import { formatearFechaHora } from "@/lib/utilidades/formatearFechaHora";
+import { SUFIJOS_PRECIO_UNIDAD_VENTA } from "@/constantes/unidadesVenta";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { Tarjeta } from "@/componentes/ui/Tarjeta";
@@ -22,6 +25,7 @@ import { Dato } from "@/componentes/ui/Dato";
 import { TablaDatos } from "@/componentes/tablas/TablaDatos";
 import { AccionesEstadoPedido } from "@/componentes/pedidos/AccionesEstadoPedido";
 import { AccionesPago } from "@/componentes/pedidos/AccionesPago";
+import { BotonAbrirMapa } from "@/componentes/pedidos/BotonAbrirMapa";
 
 export const metadata = { title: "Detalle de pedido" };
 
@@ -86,9 +90,16 @@ export default async function PaginaDetallePedido({
                       {detalle.nombreProducto}
                     </Link>,
                     <span key="precio" className="whitespace-nowrap">
-                      {formatearMoneda(detalle.precioUnitario, moneda, locale)}
+                      {formatearMoneda(detalle.precioUnitario, moneda, locale)}{" "}
+                      {SUFIJOS_PRECIO_UNIDAD_VENTA[detalle.unidadVenta]}
                     </span>,
-                    <span key="cantidad">{detalle.cantidad}</span>,
+                    <span key="cantidad" className="whitespace-nowrap">
+                      {formatearCantidad(
+                        detalle.cantidad,
+                        detalle.unidadVenta,
+                        locale,
+                      )}
+                    </span>,
                     <span key="subtotal" className="font-medium text-zinc-900">
                       {formatearMoneda(detalle.subtotal, moneda, locale)}
                     </span>,
@@ -170,22 +181,21 @@ export default async function PaginaDetallePedido({
           <Tarjeta className="p-5">
             <h2 className="text-sm font-semibold text-zinc-900">Cliente</h2>
             <dl className="mt-4 space-y-3 text-sm">
-              <Dato etiqueta="Nombre" valor={pedido.cliente.nombre} />
-              <Dato etiqueta="Teléfono" valor={pedido.cliente.telefono} />
-              {esAdmin ? (
-                <Dato etiqueta="Correo" valor={pedido.cliente.email} />
-              ) : null}
-              <Dato
-                etiqueta="Dirección"
-                valor={pedido.cliente.direccion ?? pedido.direccionEntrega}
-              />
-              <Dato etiqueta="Localidad" valor={pedido.cliente.localidad} />
-              {esAdmin ? (
-                <Dato
-                  etiqueta="Código postal"
-                  valor={pedido.cliente.codigoPostal}
-                />
-              ) : null}
+              <Dato etiqueta="Nombre" valor={pedido.clienteNombre} />
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-zinc-400">
+                  Teléfono
+                </dt>
+                <dd>
+                  <a
+                    href={`tel:${pedido.clienteTelefono}`}
+                    className="inline-flex items-center gap-1 text-zinc-800 hover:underline"
+                  >
+                    <Phone className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    {pedido.clienteTelefono}
+                  </a>
+                </dd>
+              </div>
             </dl>
           </Tarjeta>
 
@@ -200,13 +210,27 @@ export default async function PaginaDetallePedido({
                     : "Envío a domicilio"
                 }
               />
-              <Dato etiqueta="Dirección" valor={pedido.direccionEntrega} />
+              <Dato
+                etiqueta="Dirección"
+                valor={pedido.clienteDireccion ?? pedido.direccionEntrega}
+              />
+              <Dato etiqueta="Localidad" valor={pedido.clienteLocalidad} />
+              <Dato etiqueta="Referencia" valor={pedido.referenciaEntrega} />
               <Dato etiqueta="Método de pago" valor={pedido.metodoPago} />
               <Dato etiqueta="Registrado por" valor={pedido.vendedor} />
               {esAdmin ? (
                 <Dato etiqueta="Observaciones" valor={pedido.observaciones} />
               ) : null}
             </dl>
+            {pedido.tipoEntrega === "ENVIO_DOMICILIO" || pedido.mapsUrl ? (
+              <div className="mt-4">
+                <BotonAbrirMapa
+                  mapsUrl={pedido.mapsUrl}
+                  direccion={pedido.clienteDireccion ?? pedido.direccionEntrega}
+                  localidad={pedido.clienteLocalidad}
+                />
+              </div>
+            ) : null}
           </Tarjeta>
 
           {esAdmin ? (

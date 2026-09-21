@@ -10,7 +10,7 @@ import { listarCategoriasActivas } from "@/servicios/categorias/listarCategorias
 import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerConfiguracionGeneral";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { BarraFiltros } from "@/componentes/ui/BarraFiltros";
-import { CampoBusqueda } from "@/componentes/ui/CampoBusqueda";
+import { BuscadorStock } from "@/componentes/stock/BuscadorStock";
 import { SelectFiltro } from "@/componentes/ui/SelectFiltro";
 import { Paginacion } from "@/componentes/ui/Paginacion";
 import { TablaStock } from "@/componentes/stock/TablaStock";
@@ -83,10 +83,11 @@ export default async function PaginaStock({
       />
 
       <BarraFiltros baseHref="/stock" limpiarHref="/stock">
-        <CampoBusqueda
+        <BuscadorStock
           valorInicial={busqueda}
-          placeholder="Buscar por nombre o SKU"
-          className="w-full sm:w-64"
+          esAdmin={esAdmin}
+          moneda={configuracion.moneda}
+          locale={configuracion.locale}
         />
         <SelectFiltro
           nombre="categoria"

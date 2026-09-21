@@ -11,25 +11,37 @@ import {
 import type { ProductoDetalle } from "@/servicios/productos/obtenerProducto";
 import type { MetodoPagoActivo } from "@/servicios/metodosPago/listarMetodosPagoActivos";
 import type { OpcionCampo } from "@/componentes/ui/CampoSelect";
+import {
+  ETIQUETAS_UNIDAD_VENTA,
+  UNIDADES_VENTA,
+} from "@/constantes/unidadesVenta";
 import { SeccionFormulario } from "@/componentes/ui/SeccionFormulario";
 import { CampoTexto } from "@/componentes/ui/CampoTexto";
 import { CampoSelect } from "@/componentes/ui/CampoSelect";
 import { CampoTextarea } from "@/componentes/ui/CampoTextarea";
 import { CampoCheckbox } from "@/componentes/ui/CampoCheckbox";
+import { CampoImagenProducto } from "@/componentes/productos/CampoImagenProducto";
+import { CampoBarcode } from "@/componentes/productos/CampoBarcode";
 import { Boton } from "@/componentes/ui/Boton";
 import { Alerta } from "@/componentes/ui/Alerta";
 import { Etiqueta } from "@/componentes/ui/Etiqueta";
 
 export function FormularioProducto({
   producto,
+  barcodeInicial,
   categorias,
   metodosPago,
   proveedores,
+  moneda,
+  locale,
 }: {
   producto?: ProductoDetalle;
+  barcodeInicial?: string;
   categorias: OpcionCampo[];
   metodosPago: MetodoPagoActivo[];
   proveedores: OpcionCampo[];
+  moneda: string;
+  locale: string;
 }) {
   const router = useRouter();
   const esEdicion = Boolean(producto);
@@ -91,12 +103,46 @@ export function FormularioProducto({
           requerido
           error={estado.errores?.categoriaId?.[0]}
         />
+        <CampoSelect
+          etiqueta="Modalidad de venta"
+          name="unidadVenta"
+          opciones={UNIDADES_VENTA.map((unidad) => ({
+            valor: unidad,
+            etiqueta: ETIQUETAS_UNIDAD_VENTA[unidad],
+          }))}
+          defaultValue={producto?.unidadVenta ?? "UNIDAD"}
+          requerido
+          ayuda="Define cómo se interpreta el precio: por unidad o por kilogramo."
+          error={estado.errores?.unidadVenta?.[0]}
+        />
         <CampoTextarea
           etiqueta="Descripción"
           name="descripcion"
           rows={3}
           defaultValue={producto?.descripcion ?? ""}
           error={estado.errores?.descripcion?.[0]}
+        />
+      </SeccionFormulario>
+
+      <SeccionFormulario
+        titulo="Código de barras"
+        descripcion="Escaneá el código del producto o ingresalo manualmente."
+      >
+        <CampoBarcode
+          valorInicial={producto?.barcode ?? barcodeInicial}
+          error={estado.errores?.barcode?.[0]}
+          moneda={moneda}
+          locale={locale}
+        />
+      </SeccionFormulario>
+
+      <SeccionFormulario
+        titulo="Imagen del producto"
+        descripcion="Imagen de referencia opcional para identificar el producto."
+      >
+        <CampoImagenProducto
+          imagenActual={producto?.imageUrl}
+          error={estado.errores?.imagen?.[0]}
         />
       </SeccionFormulario>
 
@@ -133,7 +179,7 @@ export function FormularioProducto({
             name="stockMinimo"
             type="number"
             min="0"
-            step="1"
+            step="0.001"
             defaultValue={producto?.stockMinimo ?? 0}
             requerido
             error={estado.errores?.stockMinimo?.[0]}
@@ -166,7 +212,7 @@ export function FormularioProducto({
               name="stockInicial"
               type="number"
               min="0"
-              step="1"
+              step="0.001"
               defaultValue={0}
               ayuda="Genera un movimiento de ingreso."
             />

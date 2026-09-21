@@ -11,7 +11,6 @@ import {
   Tags,
   Truck,
   UserCog,
-  Users,
 } from "lucide-react";
 
 export type ItemNavegacion = {
@@ -30,7 +29,6 @@ export const ITEMS_NAVEGACION: ItemNavegacion[] = [
   { etiqueta: "Stock", ruta: "/stock", soloAdmin: false, icono: Boxes },
   { etiqueta: "Movimientos", ruta: "/movimientos", soloAdmin: true, icono: ArrowLeftRight },
   { etiqueta: "Pedidos", ruta: "/pedidos", soloAdmin: false, icono: ShoppingCart },
-  { etiqueta: "Clientes", ruta: "/clientes", soloAdmin: true, icono: Users },
   { etiqueta: "Reportes", ruta: "/reportes", soloAdmin: true, icono: BarChart3 },
   { etiqueta: "Empleados", ruta: "/empleados", soloAdmin: true, icono: UserCog },
   { etiqueta: "Configuración", ruta: "/configuracion", soloAdmin: true, icono: Settings },
@@ -46,7 +44,6 @@ export const ETIQUETAS_RUTA: Record<string, string> = {
   "/stock": "Stock",
   "/movimientos": "Movimientos",
   "/pedidos": "Pedidos",
-  "/clientes": "Clientes",
   "/reportes": "Reportes",
   "/empleados": "Empleados",
   "/configuracion": "Configuración",

@@ -30,7 +30,7 @@ export async function obtenerMovimientosRecientes(
     id: movimiento.id,
     producto: movimiento.producto.nombre,
     tipo: movimiento.tipo,
-    cantidad: movimiento.cantidad,
+    cantidad: Number(movimiento.cantidad),
     usuario: movimiento.usuario.name,
     createdAt: movimiento.createdAt,
   }));
