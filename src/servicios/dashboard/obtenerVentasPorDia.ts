@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma/cliente";
+import { ZONA_HORARIA } from "@/constantes/zonaHoraria";
 import { rangoUltimosDias } from "@/lib/utilidades/rangoUltimosDias";
+import { claveFechaEnZona } from "@/lib/utilidades/claveFechaEnZona";
+import { sumarDiasCalendario } from "@/lib/utilidades/sumarDiasCalendario";
+import { etiquetaDiaMesDesdeClave } from "@/lib/utilidades/etiquetaDiaMesDesdeClave";
 
 export type VentaPorDia = {
   fecha: string;
@@ -8,7 +12,8 @@ export type VentaPorDia = {
 };
 
 // Serie de ventas (pedidos no cancelados) de los últimos N días, agrupada por
-// día. El volumen está acotado por el rango, por lo que se agrega en memoria.
+// día calendario del comercio. El volumen está acotado por el rango, por lo que
+// se agrega en memoria.
 export async function obtenerVentasPorDia(dias = 14): Promise<VentaPorDia[]> {
   const { inicio, fin } = rangoUltimosDias(dias);
 
@@ -22,20 +27,16 @@ export async function obtenerVentasPorDia(dias = 14): Promise<VentaPorDia[]> {
 
   const acumulados = new Map<string, number>();
   const etiquetas = new Map<string, string>();
+  const claveInicio = claveFechaEnZona(inicio, ZONA_HORARIA);
 
   for (let indice = 0; indice < dias; indice += 1) {
-    const dia = new Date(inicio);
-    dia.setDate(inicio.getDate() + indice);
-    const clave = dia.toISOString().slice(0, 10);
+    const clave = sumarDiasCalendario(claveInicio, indice);
     acumulados.set(clave, 0);
-    etiquetas.set(
-      clave,
-      dia.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }),
-    );
+    etiquetas.set(clave, etiquetaDiaMesDesdeClave(clave));
   }
 
   for (const pedido of pedidos) {
-    const clave = pedido.createdAt.toISOString().slice(0, 10);
+    const clave = claveFechaEnZona(pedido.createdAt, ZONA_HORARIA);
     if (!acumulados.has(clave)) continue;
     acumulados.set(clave, (acumulados.get(clave) ?? 0) + Number(pedido.total));
   }

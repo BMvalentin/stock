@@ -1,7 +1,11 @@
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
+import { ZONA_HORARIA } from "@/constantes/zonaHoraria";
 import { leerParametro } from "@/lib/utilidades/parametros";
 import { parsearFechaFiltro } from "@/lib/utilidades/parsearFechaFiltro";
 import { rangoMesActual } from "@/lib/utilidades/rangoMesActual";
+import { claveFechaEnZona } from "@/lib/utilidades/claveFechaEnZona";
+import { instanteEnZona } from "@/lib/utilidades/instanteEnZona";
+import { sumarDiasCalendario } from "@/lib/utilidades/sumarDiasCalendario";
 import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerConfiguracionGeneral";
 import { obtenerReporteVentas } from "@/servicios/reportes/obtenerReporteVentas";
 import { obtenerVentasPorRango } from "@/servicios/reportes/obtenerVentasPorRango";
@@ -38,9 +42,8 @@ function calcularPeriodo(
   desdeParam?: string,
   hastaParam?: string,
 ): { desde: Date; hasta: Date } {
-  const ahora = new Date();
-  const finHoy = new Date(ahora);
-  finHoy.setHours(23, 59, 59, 999);
+  const hoy = claveFechaEnZona(new Date(), ZONA_HORARIA);
+  const finHoy = instanteEnZona(hoy, "23:59:59.999", ZONA_HORARIA);
 
   if (preset === "personalizado") {
     const mes = rangoMesActual();
@@ -51,17 +54,19 @@ function calcularPeriodo(
   }
 
   if (preset === "hoy") {
-    const inicio = new Date(ahora);
-    inicio.setHours(0, 0, 0, 0);
-    return { desde: inicio, hasta: finHoy };
+    return {
+      desde: instanteEnZona(hoy, "00:00:00.000", ZONA_HORARIA),
+      hasta: finHoy,
+    };
   }
 
   if (preset === "7d" || preset === "30d") {
     const dias = preset === "7d" ? 7 : 30;
-    const inicio = new Date(ahora);
-    inicio.setDate(inicio.getDate() - (dias - 1));
-    inicio.setHours(0, 0, 0, 0);
-    return { desde: inicio, hasta: finHoy };
+    const primerDia = sumarDiasCalendario(hoy, -(dias - 1));
+    return {
+      desde: instanteEnZona(primerDia, "00:00:00.000", ZONA_HORARIA),
+      hasta: finHoy,
+    };
   }
 
   const mes = rangoMesActual();

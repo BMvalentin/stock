@@ -34,11 +34,11 @@ export async function obtenerResumenDashboard(): Promise<ResumenDashboard> {
         estado: { in: ["PENDIENTE", "CONFIRMADO", "PREPARANDO", "LISTO"] },
       },
     }),
-    prisma.pedido.count({ where: { createdAt: { gte: inicio, lt: fin } } }),
+    prisma.pedido.count({ where: { createdAt: { gte: inicio, lte: fin } } }),
     prisma.pedido.aggregate({
       _sum: { total: true },
       where: {
-        createdAt: { gte: inicio, lt: fin },
+        createdAt: { gte: inicio, lte: fin },
         estado: { not: "CANCELADO" },
       },
     }),
