@@ -54,6 +54,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // El adaptador de Prisma y el driver `mariadb` usan APIs de Node y no deben
+  // bundlearse: se resuelven con `require` nativo en el servidor.
+  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb"],
 };
 
 export default nextConfig;
