@@ -12,9 +12,12 @@ export type DatosProducto = {
   barcode?: string;
   categoriaId: string;
   unidadVenta: UnidadVenta;
+  permiteVentaSuelta: boolean;
+  pesoPresentacionKg?: number;
   stockMinimo: number;
   unidadesPorBulto: number;
   precios: { metodoPagoId: string; precio: number }[];
+  preciosSuelto: { metodoPagoId: string; precio: number }[];
   proveedorIds: string[];
   proveedorPrincipalId?: string;
   imagen?: { url: string; publicId: string };
@@ -56,6 +59,10 @@ export async function crearProducto(
           barcode: datos.barcode ?? null,
           categoriaId: datos.categoriaId,
           unidadVenta: datos.unidadVenta,
+          permiteVentaSuelta: datos.permiteVentaSuelta,
+          pesoPresentacionKg: datos.permiteVentaSuelta
+            ? (datos.pesoPresentacionKg ?? null)
+            : null,
           stockActual: datos.stockInicial,
           stockMinimo: datos.stockMinimo,
           unidadesPorBulto: datos.unidadesPorBulto,
@@ -67,6 +74,14 @@ export async function crearProducto(
               precio: precio.precio,
             })),
           },
+          preciosSuelto: datos.permiteVentaSuelta
+            ? {
+                create: datos.preciosSuelto.map((precio) => ({
+                  metodoPagoId: precio.metodoPagoId,
+                  precio: precio.precio,
+                })),
+              }
+            : undefined,
           proveedores:
             datos.proveedorIds.length > 0
               ? {
@@ -104,6 +119,10 @@ export async function crearProducto(
             sku: datos.sku,
             barcode: datos.barcode ?? null,
             unidadVenta: datos.unidadVenta,
+            permiteVentaSuelta: datos.permiteVentaSuelta,
+            pesoPresentacionKg: datos.permiteVentaSuelta
+              ? (datos.pesoPresentacionKg ?? null)
+              : null,
             stockInicial: datos.stockInicial,
           },
         },

@@ -42,14 +42,27 @@ export function parsearPedido(formData: FormData): ResultadoParseoPedido {
     return { ok: false, errores: z.flattenError(resultado.error).fieldErrors };
   }
 
-  // Consolida productos repetidos sumando sus cantidades.
-  const consolidadas = new Map<string, number>();
+  // Consolida líneas repetidas sumando sus cantidades. La clave incluye la
+  // modalidad: un mismo producto puede venderse como presentación y suelto.
+  const consolidadas = new Map<
+    string,
+    { productoId: string; modalidad?: "UNIDAD" | "KILOGRAMO"; cantidad: number }
+  >();
 
   for (const linea of resultado.data.lineas) {
-    consolidadas.set(
-      linea.productoId,
-      (consolidadas.get(linea.productoId) ?? 0) + linea.cantidad,
-    );
+    const clave = `${linea.productoId}::${linea.modalidad ?? ""}`;
+    const existente = consolidadas.get(clave);
+
+    if (existente) {
+      existente.cantidad += linea.cantidad;
+      continue;
+    }
+
+    consolidadas.set(clave, {
+      productoId: linea.productoId,
+      modalidad: linea.modalidad,
+      cantidad: linea.cantidad,
+    });
   }
 
   return {
@@ -66,10 +79,7 @@ export function parsearPedido(formData: FormData): ResultadoParseoPedido {
       longitud: resultado.data.longitud,
       metodoPagoId: resultado.data.metodoPagoId,
       observaciones: resultado.data.observaciones,
-      lineas: [...consolidadas].map(([productoId, cantidad]) => ({
-        productoId,
-        cantidad,
-      })),
+      lineas: [...consolidadas.values()],
     },
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { accionCrearProducto } from "@/acciones/productos/accionCrearProducto";
 import { accionActualizarProducto } from "@/acciones/productos/accionActualizarProducto";
@@ -15,6 +15,7 @@ import {
   ETIQUETAS_UNIDAD_VENTA,
   UNIDADES_VENTA,
 } from "@/constantes/unidadesVenta";
+import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
 import { SeccionFormulario } from "@/componentes/ui/SeccionFormulario";
 import { CampoTexto } from "@/componentes/ui/CampoTexto";
 import { CampoSelect } from "@/componentes/ui/CampoSelect";
@@ -45,6 +46,12 @@ export function FormularioProducto({
 }) {
   const router = useRouter();
   const esEdicion = Boolean(producto);
+  const [unidadVenta, setUnidadVenta] = useState<"UNIDAD" | "KILOGRAMO">(
+    producto?.unidadVenta ?? "UNIDAD",
+  );
+  const [permiteVentaSuelta, setPermiteVentaSuelta] = useState(
+    producto?.permiteVentaSuelta ?? false,
+  );
   const accion = producto
     ? accionActualizarProducto.bind(null, producto.id)
     : accionCrearProducto;
@@ -62,6 +69,12 @@ export function FormularioProducto({
 
   const precioPorMetodo = new Map(
     (producto?.precios ?? []).map((precio) => [
+      precio.metodoPagoId,
+      precio.precio,
+    ]),
+  );
+  const precioSueltoPorMetodo = new Map(
+    (producto?.preciosSuelto ?? []).map((precio) => [
       precio.metodoPagoId,
       precio.precio,
     ]),
@@ -106,13 +119,18 @@ export function FormularioProducto({
         <CampoSelect
           etiqueta="Modalidad de venta"
           name="unidadVenta"
+          value={unidadVenta}
+          onChange={(evento) => {
+            const valor = evento.target.value as "UNIDAD" | "KILOGRAMO";
+            setUnidadVenta(valor);
+            if (valor !== "UNIDAD") setPermiteVentaSuelta(false);
+          }}
           opciones={UNIDADES_VENTA.map((unidad) => ({
             valor: unidad,
             etiqueta: ETIQUETAS_UNIDAD_VENTA[unidad],
           }))}
-          defaultValue={producto?.unidadVenta ?? "UNIDAD"}
           requerido
-          ayuda="Define cómo se interpreta el precio: por unidad o por kilogramo."
+          ayuda="Define cómo se interpreta el precio: por unidad/presentación o por kilogramo."
           error={estado.errores?.unidadVenta?.[0]}
         />
         <CampoTextarea
@@ -147,35 +165,104 @@ export function FormularioProducto({
       </SeccionFormulario>
 
       <SeccionFormulario
-        titulo="Precios"
-        descripcion="Un precio por cada método de pago activo."
+        titulo="Precios y venta"
+        descripcion={
+          unidadVenta === "KILOGRAMO"
+            ? "Un precio por kilogramo para cada método de pago activo."
+            : "Un precio por bulto para cada método de pago activo."
+        }
       >
         {metodosPago.length === 0 ? (
           <p className="text-sm text-zinc-500">
             No hay métodos de pago activos. Configuralos en Configuración.
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {metodosPago.map((metodo) => (
-              <CampoTexto
-                key={metodo.id}
-                etiqueta={metodo.nombre}
-                name={`precio_${metodo.id}`}
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={precioPorMetodo.get(metodo.id) ?? ""}
-                error={estado.errores?.[`precio_${metodo.id}`]?.[0]}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {metodosPago.map((metodo) => (
+                <CampoTexto
+                  key={metodo.id}
+                  etiqueta={
+                    unidadVenta === "KILOGRAMO"
+                      ? `Precio por kg · ${metodo.nombre}`
+                      : `Precio por bulto · ${metodo.nombre}`
+                  }
+                  name={`precio_${metodo.id}`}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={precioPorMetodo.get(metodo.id) ?? ""}
+                  error={estado.errores?.[`precio_${metodo.id}`]?.[0]}
+                />
+              ))}
+            </div>
+
+            {unidadVenta === "UNIDAD" ? (
+              <div className="space-y-4 rounded-md border border-zinc-200 p-4">
+                <CampoCheckbox
+                  etiqueta="Permitir venta suelta por kg"
+                  name="permiteVentaSuelta"
+                  checked={permiteVentaSuelta}
+                  onChange={(evento) =>
+                    setPermiteVentaSuelta(evento.target.checked)
+                  }
+                  error={estado.errores?.permiteVentaSuelta?.[0]}
+                />
+                <p className="text-xs text-zinc-500">
+                  El stock de este producto se lleva en kilogramos. Cada bolsa
+                  descuenta su peso de presentación.
+                </p>
+
+                {permiteVentaSuelta ? (
+                  <>
+                    <CampoTexto
+                      etiqueta="Peso de la presentación (kg)"
+                      name="pesoPresentacionKg"
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      defaultValue={producto?.pesoPresentacionKg ?? ""}
+                      ayuda="Ej.: 15 para una bolsa de 15 kg."
+                      requerido
+                      error={estado.errores?.pesoPresentacionKg?.[0]}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {metodosPago.map((metodo) => (
+                        <CampoTexto
+                          key={metodo.id}
+                          etiqueta={`Precio por kg · ${metodo.nombre}`}
+                          name={`precioSuelto_${metodo.id}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          defaultValue={
+                            precioSueltoPorMetodo.get(metodo.id) ?? ""
+                          }
+                          requerido
+                          error={
+                            estado.errores?.[`precioSuelto_${metodo.id}`]?.[0]
+                          }
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         )}
       </SeccionFormulario>
 
       <SeccionFormulario titulo="Stock">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div
+          className={`grid gap-4 ${
+            permiteVentaSuelta ? "sm:grid-cols-2" : "sm:grid-cols-3"
+          }`}
+        >
           <CampoTexto
-            etiqueta="Stock mínimo"
+            etiqueta={
+              permiteVentaSuelta ? "Stock mínimo (kg)" : "Stock mínimo"
+            }
             name="stockMinimo"
             type="number"
             min="0"
@@ -184,23 +271,32 @@ export function FormularioProducto({
             requerido
             error={estado.errores?.stockMinimo?.[0]}
           />
-          <CampoTexto
-            etiqueta="Unidades por bulto"
-            name="unidadesPorBulto"
-            type="number"
-            min="1"
-            step="1"
-            defaultValue={producto?.unidadesPorBulto ?? 1}
-            requerido
-            error={estado.errores?.unidadesPorBulto?.[0]}
-          />
+          {!permiteVentaSuelta ? (
+            <CampoTexto
+              etiqueta="Unidades por bulto"
+              name="unidadesPorBulto"
+              type="number"
+              min="1"
+              step="1"
+              defaultValue={producto?.unidadesPorBulto ?? 1}
+              requerido
+              error={estado.errores?.unidadesPorBulto?.[0]}
+            />
+          ) : (
+            <input type="hidden" name="unidadesPorBulto" value={1} />
+          )}
           {esEdicion ? (
             <div className="space-y-1.5">
               <span className="block text-sm font-medium text-zinc-700">
                 Stock actual
               </span>
               <div className="flex h-9 items-center rounded-md border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700">
-                {producto?.stockActual ?? 0}
+                {permiteVentaSuelta
+                  ? formatearStockPresentacion(
+                      producto?.stockActual ?? 0,
+                      producto?.pesoPresentacionKg,
+                    )
+                  : (producto?.stockActual ?? 0)}
               </div>
               <p className="text-xs text-zinc-500">
                 Se ajusta desde Stock con un movimiento.
@@ -208,7 +304,7 @@ export function FormularioProducto({
             </div>
           ) : (
             <CampoTexto
-              etiqueta="Stock inicial"
+              etiqueta={permiteVentaSuelta ? "Stock inicial (kg)" : "Stock inicial"}
               name="stockInicial"
               type="number"
               min="0"

@@ -26,6 +26,14 @@ export async function actualizarProducto(
       nombre: true,
       imagePublicId: true,
       precios: { select: { id: true, metodoPagoId: true, precio: true } },
+      preciosSuelto: {
+        select: {
+          id: true,
+          metodoPagoId: true,
+          precio: true,
+          activo: true,
+        },
+      },
       proveedores: {
         select: { id: true, proveedorId: true, esPrincipal: true },
       },
@@ -71,6 +79,10 @@ export async function actualizarProducto(
         barcode: datos.barcode ?? null,
         categoriaId: datos.categoriaId,
         unidadVenta: datos.unidadVenta,
+        permiteVentaSuelta: datos.permiteVentaSuelta,
+        pesoPresentacionKg: datos.permiteVentaSuelta
+          ? (datos.pesoPresentacionKg ?? null)
+          : null,
         stockMinimo: datos.stockMinimo,
         unidadesPorBulto: datos.unidadesPorBulto,
       },
@@ -125,6 +137,71 @@ export async function actualizarProducto(
         },
         tx,
       );
+    }
+
+    // Precios de venta suelta. Si la modalidad está deshabilitada, se
+    // desactivan los existentes sin borrarlos. Si está habilitada, se crean o
+    // actualizan y se registra el historial (`esSuelto = true`).
+    if (!datos.permiteVentaSuelta) {
+      await tx.precioProductoSuelto.updateMany({
+        where: { productoId: id, activo: true },
+        data: { activo: false },
+      });
+    } else {
+      for (const precio of datos.preciosSuelto) {
+        const existente = producto.preciosSuelto.find(
+          (actual) => actual.metodoPagoId === precio.metodoPagoId,
+        );
+
+        if (!existente) {
+          await tx.precioProductoSuelto.create({
+            data: {
+              productoId: id,
+              metodoPagoId: precio.metodoPagoId,
+              precio: precio.precio,
+            },
+          });
+          continue;
+        }
+
+        const anterior = Number(existente.precio);
+
+        if (existente.activo && anterior === precio.precio) continue;
+
+        await tx.precioProductoSuelto.update({
+          where: { id: existente.id },
+          data: { precio: precio.precio, activo: true },
+        });
+
+        if (anterior === precio.precio) continue;
+
+        await tx.precioProductoHistorial.create({
+          data: {
+            productoId: id,
+            metodoPagoId: precio.metodoPagoId,
+            precioAnterior: anterior,
+            precioNuevo: precio.precio,
+            esSuelto: true,
+            usuarioId,
+          },
+        });
+
+        await registrarAuditoria(
+          {
+            usuarioId,
+            accion: ACCIONES_AUDITORIA.PRECIO_MODIFICADO,
+            entidad: "Producto",
+            entidadId: id,
+            datos: {
+              metodoPagoId: precio.metodoPagoId,
+              esSuelto: true,
+              precioAnterior: anterior,
+              precioNuevo: precio.precio,
+            },
+          },
+          tx,
+        );
+      }
     }
 
     // Proveedores: se preservan los datos de costo/código de los vínculos

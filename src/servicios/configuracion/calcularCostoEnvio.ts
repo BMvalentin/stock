@@ -3,8 +3,11 @@ import { obtenerConfiguracionEnvio } from "@/servicios/configuracion/obtenerConf
 import type { TipoEntrega } from "@/generated/prisma/enums";
 
 export type LineaEnvio = {
+  // Cantidad vendida (unidades o kg según la modalidad de la línea).
   cantidad: number;
-  unidadesPorBulto: number;
+  // Bultos equivalentes ya calculados por el servicio de totales. Una venta
+  // suelta cuenta la fracción de bulto que consume.
+  bultos: number;
 };
 
 // Calcula el costo de envío según la configuración vigente del comercio. El
@@ -39,11 +42,9 @@ export async function calcularCostoEnvio(
     return precio.mul(unidades).toDecimalPlaces(2);
   }
 
-  // POR_BULTO: 1 producto = 1 bulto por defecto (`unidadesPorBulto` = 1).
-  const bultos = lineas.reduce(
-    (total, linea) => total + linea.cantidad / linea.unidadesPorBulto,
-    0,
-  );
+  // POR_BULTO: los bultos los calcula el servicio de totales, considerando la
+  // presentación (`pesoPresentacionKg`) o `unidadesPorBulto` según el producto.
+  const bultos = lineas.reduce((total, linea) => total + linea.bultos, 0);
 
   return precio.mul(bultos).toDecimalPlaces(2);
 }

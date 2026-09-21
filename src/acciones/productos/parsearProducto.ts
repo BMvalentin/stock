@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   esquemaPrecioProducto,
+  esquemaPrecioProductoSuelto,
   esquemaProducto,
   esquemaStockInicial,
 } from "@/lib/validaciones/productos";
@@ -30,6 +31,8 @@ export async function parsearProducto(
     barcode: formData.get("barcode") ?? "",
     categoriaId: formData.get("categoriaId"),
     unidadVenta: formData.get("unidadVenta") ?? "UNIDAD",
+    permiteVentaSuelta: formData.get("permiteVentaSuelta") === "on",
+    pesoPresentacionKg: formData.get("pesoPresentacionKg"),
     stockMinimo: formData.get("stockMinimo"),
     unidadesPorBulto: formData.get("unidadesPorBulto"),
   });
@@ -76,6 +79,32 @@ export async function parsearProducto(
     return { ok: false, errores: erroresPrecios };
   }
 
+  // Precios de venta suelta: solo se exigen si la modalidad está habilitada.
+  const preciosSuelto: DatosProducto["preciosSuelto"] = [];
+  const erroresPreciosSuelto: Record<string, string[]> = {};
+
+  if (resultado.data.permiteVentaSuelta) {
+    for (const metodo of metodos) {
+      const parseo = esquemaPrecioProductoSuelto.safeParse({
+        metodoPagoId: metodo.id,
+        precio: formData.get(`precioSuelto_${metodo.id}`),
+      });
+
+      if (!parseo.success) {
+        erroresPreciosSuelto[`precioSuelto_${metodo.id}`] = [
+          "Precio por kg inválido",
+        ];
+        continue;
+      }
+
+      preciosSuelto.push(parseo.data);
+    }
+
+    if (Object.keys(erroresPreciosSuelto).length > 0) {
+      return { ok: false, errores: erroresPreciosSuelto };
+    }
+  }
+
   const stock = esquemaStockInicial.safeParse(
     formData.get("stockInicial") ?? "0",
   );
@@ -104,9 +133,12 @@ export async function parsearProducto(
       barcode: resultado.data.barcode,
       categoriaId: resultado.data.categoriaId,
       unidadVenta: resultado.data.unidadVenta,
+      permiteVentaSuelta: resultado.data.permiteVentaSuelta,
+      pesoPresentacionKg: resultado.data.pesoPresentacionKg,
       stockMinimo: resultado.data.stockMinimo,
       unidadesPorBulto: resultado.data.unidadesPorBulto,
       precios,
+      preciosSuelto,
       proveedorIds,
       proveedorPrincipalId,
     },

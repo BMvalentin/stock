@@ -3,6 +3,7 @@ import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
 import { puedeCambiarEstadoPedido } from "@/servicios/pedidos/puedeCambiarEstadoPedido";
+import { calcularCantidadStockLinea } from "@/servicios/pedidos/calcularCantidadStockLinea";
 import type { EstadoPedido } from "@/generated/prisma/enums";
 
 // Cambia el estado del pedido respetando la máquina de estados. Al confirmar
@@ -30,6 +31,8 @@ export async function cambiarEstadoPedido(
             productoId: true,
             cantidad: true,
             nombreProducto: true,
+            unidadVenta: true,
+            pesoPresentacionKg: true,
           },
         },
       },
@@ -50,6 +53,12 @@ export async function cambiarEstadoPedido(
 
     if (nuevoEstado === "CONFIRMADO" && !pedido.stockDescontado) {
       for (const detalle of pedido.detalles) {
+        const cantidadStock = calcularCantidadStockLinea(
+          detalle.unidadVenta,
+          detalle.cantidad,
+          detalle.pesoPresentacionKg,
+        );
+
         const producto = await tx.producto.findUnique({
           where: { id: detalle.productoId },
           select: { stockActual: true },
@@ -64,9 +73,9 @@ export async function cambiarEstadoPedido(
         const aplicado = await tx.producto.updateMany({
           where: {
             id: detalle.productoId,
-            stockActual: { gte: detalle.cantidad },
+            stockActual: { gte: cantidadStock },
           },
-          data: { stockActual: { decrement: detalle.cantidad } },
+          data: { stockActual: { decrement: cantidadStock } },
         });
 
         if (aplicado.count === 0) {
@@ -81,13 +90,13 @@ export async function cambiarEstadoPedido(
         });
 
         const stockPosterior = actualizado.stockActual;
-        const stockAnterior = stockPosterior.add(detalle.cantidad);
+        const stockAnterior = stockPosterior.add(cantidadStock);
 
         await tx.movimientoStock.create({
           data: {
             productoId: detalle.productoId,
             tipo: "VENTA",
-            cantidad: detalle.cantidad,
+            cantidad: cantidadStock,
             stockAnterior,
             stockPosterior,
             usuarioId,
@@ -106,6 +115,12 @@ export async function cambiarEstadoPedido(
       !pedido.stockDevuelto
     ) {
       for (const detalle of pedido.detalles) {
+        const cantidadStock = calcularCantidadStockLinea(
+          detalle.unidadVenta,
+          detalle.cantidad,
+          detalle.pesoPresentacionKg,
+        );
+
         const producto = await tx.producto.findUnique({
           where: { id: detalle.productoId },
           select: { stockActual: true },
@@ -115,7 +130,7 @@ export async function cambiarEstadoPedido(
 
         await tx.producto.update({
           where: { id: detalle.productoId },
-          data: { stockActual: { increment: detalle.cantidad } },
+          data: { stockActual: { increment: cantidadStock } },
         });
 
         const actualizado = await tx.producto.findUniqueOrThrow({
@@ -124,13 +139,13 @@ export async function cambiarEstadoPedido(
         });
 
         const stockPosterior = actualizado.stockActual;
-        const stockAnterior = stockPosterior.sub(detalle.cantidad);
+        const stockAnterior = stockPosterior.sub(cantidadStock);
 
         await tx.movimientoStock.create({
           data: {
             productoId: detalle.productoId,
             tipo: "DEVOLUCION",
-            cantidad: detalle.cantidad,
+            cantidad: cantidadStock,
             stockAnterior,
             stockPosterior,
             usuarioId,
@@ -162,5 +177,10 @@ export async function cambiarEstadoPedido(
       },
       tx,
     );
-  });
+    },
+    // El descuento recorre cada detalle con varias consultas; en bases remotas
+    // el timeout por defecto (5 s) resulta insuficiente para pedidos con varias
+    // líneas. Se amplía sin cambiar la atomicidad.
+    { timeout: 30_000 },
+  );
 }

@@ -22,6 +22,8 @@ export type ProductoDetalle = {
   barcode: string | null;
   activo: boolean;
   unidadVenta: UnidadVenta;
+  permiteVentaSuelta: boolean;
+  pesoPresentacionKg: number | null;
   stockActual: number;
   stockMinimo: number;
   unidadesPorBulto: number;
@@ -29,6 +31,7 @@ export type ProductoDetalle = {
   categoria: string;
   imageUrl: string | null;
   precios: PrecioDetalle[];
+  preciosSuelto: PrecioDetalle[];
   proveedores: ProveedorDeProducto[];
 };
 
@@ -45,6 +48,8 @@ export async function obtenerProducto(
       barcode: true,
       activo: true,
       unidadVenta: true,
+      permiteVentaSuelta: true,
+      pesoPresentacionKg: true,
       stockActual: true,
       stockMinimo: true,
       unidadesPorBulto: true,
@@ -52,6 +57,14 @@ export async function obtenerProducto(
       imageUrl: true,
       categoria: { select: { nombre: true } },
       precios: {
+        select: {
+          metodoPagoId: true,
+          precio: true,
+          metodoPago: { select: { nombre: true, codigo: true } },
+        },
+      },
+      preciosSuelto: {
+        where: { activo: true },
         select: {
           metodoPagoId: true,
           precio: true,
@@ -77,6 +90,11 @@ export async function obtenerProducto(
     barcode: producto.barcode,
     activo: producto.activo,
     unidadVenta: producto.unidadVenta,
+    permiteVentaSuelta: producto.permiteVentaSuelta,
+    pesoPresentacionKg:
+      producto.pesoPresentacionKg === null
+        ? null
+        : Number(producto.pesoPresentacionKg),
     stockActual: Number(producto.stockActual),
     stockMinimo: Number(producto.stockMinimo),
     unidadesPorBulto: producto.unidadesPorBulto,
@@ -84,6 +102,12 @@ export async function obtenerProducto(
     categoria: producto.categoria.nombre,
     imageUrl: producto.imageUrl,
     precios: producto.precios.map((precio) => ({
+      metodoPagoId: precio.metodoPagoId,
+      metodo: precio.metodoPago.nombre,
+      codigo: precio.metodoPago.codigo,
+      precio: Number(precio.precio),
+    })),
+    preciosSuelto: producto.preciosSuelto.map((precio) => ({
       metodoPagoId: precio.metodoPagoId,
       metodo: precio.metodoPago.nombre,
       codigo: precio.metodoPago.codigo,

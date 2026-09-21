@@ -14,7 +14,7 @@ import type {
 } from "@/tipos/pedidoFormulario";
 import type { ProductoParaPedido } from "@/servicios/productos/buscarProductosParaPedido";
 import type { MetodoPagoActivo } from "@/servicios/metodosPago/listarMetodosPagoActivos";
-import type { TipoEntrega } from "@/generated/prisma/enums";
+import type { TipoEntrega, UnidadVenta } from "@/generated/prisma/enums";
 import { SeccionFormulario } from "@/componentes/ui/SeccionFormulario";
 import { CampoTexto } from "@/componentes/ui/CampoTexto";
 import { CampoSelect } from "@/componentes/ui/CampoSelect";
@@ -91,6 +91,7 @@ export function FormularioPedido({
         lineas.map((linea) => ({
           productoId: linea.productoId,
           cantidad: linea.cantidad,
+          modalidad: linea.modalidad,
         })),
         metodoPagoId,
         tipoEntrega,
@@ -116,15 +117,19 @@ export function FormularioPedido({
     };
   }, [lineas, metodoPagoId, tipoEntrega]);
 
-  function agregarProducto(producto: ProductoParaPedido) {
+  function agregarProducto(
+    producto: ProductoParaPedido,
+    modalidad: UnidadVenta,
+  ) {
     setLineas((actuales) => {
       const existente = actuales.find(
-        (linea) => linea.productoId === producto.id,
+        (linea) =>
+          linea.productoId === producto.id && linea.modalidad === modalidad,
       );
 
       if (existente) {
         return actuales.map((linea) =>
-          linea.productoId === producto.id
+          linea.id === existente.id
             ? { ...linea, cantidad: linea.cantidad + 1 }
             : linea,
         );
@@ -133,22 +138,27 @@ export function FormularioPedido({
       return [
         ...actuales,
         {
+          id: crypto.randomUUID(),
           productoId: producto.id,
           nombre: producto.nombre,
           sku: producto.sku,
+          modalidad,
           unidadVenta: producto.unidadVenta,
+          permiteVentaSuelta: producto.permiteVentaSuelta,
+          pesoPresentacionKg: producto.pesoPresentacionKg,
           cantidad: 1,
           precios: producto.precios,
+          preciosSuelto: producto.preciosSuelto,
           stockActual: producto.stockActual,
         },
       ];
     });
   }
 
-  function cambiarCantidad(productoId: string, cantidad: number) {
+  function cambiarCantidad(id: string, cantidad: number) {
     setLineas((actuales) =>
       actuales.map((linea) =>
-        linea.productoId === productoId
+        linea.id === id
           ? {
               ...linea,
               cantidad: Number.isFinite(cantidad) ? Math.max(0, cantidad) : 0,
@@ -158,10 +168,42 @@ export function FormularioPedido({
     );
   }
 
-  function quitarProducto(productoId: string) {
-    setLineas((actuales) =>
-      actuales.filter((linea) => linea.productoId !== productoId),
-    );
+  function cambiarModalidad(id: string, modalidad: UnidadVenta) {
+    setLineas((actuales) => {
+      const linea = actuales.find((actual) => actual.id === id);
+      if (!linea) return actuales;
+
+      const otra = actuales.find(
+        (actual) =>
+          actual.id !== id &&
+          actual.productoId === linea.productoId &&
+          actual.modalidad === modalidad,
+      );
+
+      // Si el producto ya tiene una línea en esa modalidad, se quita la línea
+      // actual para no mezclar unidades (bolsas con kg).
+      if (otra) {
+        return actuales.filter((actual) => actual.id !== id);
+      }
+
+      return actuales.map((actual) =>
+        actual.id === id
+          ? {
+              ...actual,
+              modalidad,
+              // Al pasar a presentación la cantidad debe ser entera.
+              cantidad:
+                modalidad === "UNIDAD"
+                  ? Math.max(1, Math.floor(actual.cantidad))
+                  : actual.cantidad,
+            }
+          : actual,
+      );
+    });
+  }
+
+  function quitarProducto(id: string) {
+    setLineas((actuales) => actuales.filter((linea) => linea.id !== id));
   }
 
   const esEnvio = tipoEntrega === "ENVIO_DOMICILIO";
@@ -283,6 +325,7 @@ export function FormularioPedido({
           moneda={moneda}
           locale={locale}
           onCambiarCantidad={cambiarCantidad}
+          onCambiarModalidad={cambiarModalidad}
           onQuitar={quitarProducto}
         />
       </SeccionFormulario>
@@ -326,6 +369,7 @@ export function FormularioPedido({
           lineas.map((linea) => ({
             productoId: linea.productoId,
             cantidad: linea.cantidad,
+            modalidad: linea.modalidad,
           })),
         )}
       />

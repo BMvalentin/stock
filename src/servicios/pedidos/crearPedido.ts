@@ -2,15 +2,15 @@ import { prisma } from "@/lib/prisma/cliente";
 import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
-import { calcularTotalesPedido } from "@/servicios/pedidos/calcularTotalesPedido";
+import {
+  calcularTotalesPedido,
+  type LineaPedidoEntrada,
+} from "@/servicios/pedidos/calcularTotalesPedido";
 import { calcularCostoEnvio } from "@/servicios/configuracion/calcularCostoEnvio";
 import { validarStockPedido } from "@/servicios/pedidos/validarStockPedido";
 import type { TipoEntrega } from "@/generated/prisma/enums";
 
-export type LineaPedidoEntrada = {
-  productoId: string;
-  cantidad: number;
-};
+export type { LineaPedidoEntrada };
 
 export type DatosPedido = {
   clienteNombre: string;
@@ -54,7 +54,7 @@ export async function crearPedido(
     datos.tipoEntrega,
     lineas.map((linea) => ({
       cantidad: linea.cantidad.toNumber(),
-      unidadesPorBulto: linea.unidadesPorBulto,
+      bultos: linea.bultos.toNumber(),
     })),
   );
 
@@ -85,6 +85,7 @@ export async function crearPedido(
             productoId: linea.productoId,
             nombreProducto: linea.nombreProducto,
             unidadVenta: linea.unidadVenta,
+            pesoPresentacionKg: linea.pesoPresentacionKg,
             precioUnitario: linea.precioUnitario,
             cantidad: linea.cantidad,
             subtotal: linea.subtotal,

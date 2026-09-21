@@ -13,6 +13,7 @@ import {
 } from "@/constantes/estadoStock";
 import { TAMANO_MINIATURA_PRODUCTO } from "@/constantes/imagenes";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
 import { urlImagenCloudinary } from "@/lib/utilidades/urlImagenCloudinary";
 import { TablaDatos } from "@/componentes/tablas/TablaDatos";
 import { MenuAcciones } from "@/componentes/ui/MenuAcciones";
@@ -106,6 +107,9 @@ export function TablaProductos({
                   {producto.nombre}
                 </Link>
                 <p className="truncate text-xs text-zinc-500">{producto.sku}</p>
+                {producto.permiteVentaSuelta ? (
+                  <Etiqueta tono="info">Venta suelta</Etiqueta>
+                ) : null}
               </div>,
               <span key="categoria" className="text-sm text-zinc-600">
                 {producto.categoria}
@@ -127,7 +131,12 @@ export function TablaProductos({
               </div>,
               <div key="stock" className="space-y-1">
                 <p className="text-sm font-medium text-zinc-900">
-                  {producto.stockActual}
+                  {producto.permiteVentaSuelta
+                    ? formatearStockPresentacion(
+                        producto.stockActual,
+                        producto.pesoPresentacionKg,
+                      )
+                    : producto.stockActual}
                 </p>
                 <Etiqueta tono={TONOS_ESTADO_STOCK[estado]}>
                   {ETIQUETAS_ESTADO_STOCK[estado]}

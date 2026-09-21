@@ -15,6 +15,8 @@ export type ProductoStock = {
   nombre: string;
   sku: string | null;
   categoria: string;
+  permiteVentaSuelta: boolean;
+  pesoPresentacionKg: number | null;
   stockActual: number;
   stockMinimo: number;
   actualizado: Date;
@@ -69,6 +71,8 @@ export async function listarStock(
         id: true,
         nombre: true,
         sku: true,
+        permiteVentaSuelta: true,
+        pesoPresentacionKg: true,
         stockActual: true,
         stockMinimo: true,
         updatedAt: true,
@@ -84,6 +88,11 @@ export async function listarStock(
       nombre: producto.nombre,
       sku: producto.sku,
       categoria: producto.categoria.nombre,
+      permiteVentaSuelta: producto.permiteVentaSuelta,
+      pesoPresentacionKg:
+        producto.pesoPresentacionKg === null
+          ? null
+          : Number(producto.pesoPresentacionKg),
       stockActual: Number(producto.stockActual),
       stockMinimo: Number(producto.stockMinimo),
       actualizado: producto.updatedAt,

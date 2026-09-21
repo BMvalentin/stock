@@ -9,11 +9,14 @@ export type ProductoPorBarcode = {
   barcode: string;
   activo: boolean;
   unidadVenta: UnidadVenta;
+  permiteVentaSuelta: boolean;
+  pesoPresentacionKg: number | null;
   stockActual: number;
   stockMinimo: number;
   categoria: string;
   imageUrl: string | null;
   precios: PrecioListado[];
+  preciosSuelto: PrecioListado[];
 };
 
 // Búsqueda directa por código de barras (índice único). Devuelve solo los
@@ -30,11 +33,21 @@ export async function buscarProductoPorBarcode(
       barcode: true,
       activo: true,
       unidadVenta: true,
+      permiteVentaSuelta: true,
+      pesoPresentacionKg: true,
       stockActual: true,
       stockMinimo: true,
       imageUrl: true,
       categoria: { select: { nombre: true } },
       precios: {
+        select: {
+          metodoPagoId: true,
+          precio: true,
+          metodoPago: { select: { nombre: true, codigo: true } },
+        },
+      },
+      preciosSuelto: {
+        where: { activo: true },
         select: {
           metodoPagoId: true,
           precio: true,
@@ -53,11 +66,22 @@ export async function buscarProductoPorBarcode(
     barcode: producto.barcode,
     activo: producto.activo,
     unidadVenta: producto.unidadVenta,
+    permiteVentaSuelta: producto.permiteVentaSuelta,
+    pesoPresentacionKg:
+      producto.pesoPresentacionKg === null
+        ? null
+        : Number(producto.pesoPresentacionKg),
     stockActual: Number(producto.stockActual),
     stockMinimo: Number(producto.stockMinimo),
     categoria: producto.categoria.nombre,
     imageUrl: producto.imageUrl,
     precios: producto.precios.map((precio) => ({
+      metodoPagoId: precio.metodoPagoId,
+      metodo: precio.metodoPago.nombre,
+      codigo: precio.metodoPago.codigo,
+      precio: Number(precio.precio),
+    })),
+    preciosSuelto: producto.preciosSuelto.map((precio) => ({
       metodoPagoId: precio.metodoPagoId,
       metodo: precio.metodoPago.nombre,
       codigo: precio.metodoPago.codigo,

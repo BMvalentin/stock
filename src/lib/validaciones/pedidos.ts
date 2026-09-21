@@ -15,15 +15,20 @@ const opcional = (max: number) =>
     .optional()
     .transform((valor) => (valor ? valor : undefined));
 
-// Línea enviada por el cliente. Solo se aceptan el producto y la cantidad: el
-// precio y el subtotal los reconstruye el servidor. La distinción unidad/kg se
-// valida en el servicio según la modalidad del producto.
+// Línea enviada por el cliente. Solo se aceptan el producto, la cantidad y la
+// modalidad elegida: el precio y el subtotal los reconstruye el servidor. La
+// modalidad distingue la presentación/bulto (`UNIDAD`) de la venta suelta
+// (`KILOGRAMO`) en productos que admiten ambas; si falta, se usa la del
+// producto. Las cantidades en kg admiten hasta 3 decimales.
 export const esquemaLineaPedido = z.object({
   productoId: z.string().min(1, "Producto inválido"),
   cantidad: z.coerce
     .number()
     .positive("La cantidad debe ser mayor a cero")
     .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
+  modalidad: z
+    .enum(["UNIDAD", "KILOGRAMO"], { message: "Modalidad inválida" })
+    .optional(),
 });
 
 export const esquemaLineasPedido = z

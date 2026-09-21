@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma/cliente";
+import type { Prisma } from "@/generated/prisma/client";
 import type { PrecioListado } from "@/servicios/productos/listarProductos";
 import type { UnidadVenta } from "@/generated/prisma/enums";
 
@@ -8,8 +9,11 @@ export type ProductoParaPedido = {
   sku: string | null;
   barcode: string | null;
   unidadVenta: UnidadVenta;
+  permiteVentaSuelta: boolean;
+  pesoPresentacionKg: number | null;
   stockActual: number;
   precios: PrecioListado[];
+  preciosSuelto: PrecioListado[];
 };
 
 const LIMITE = 10;
@@ -41,8 +45,18 @@ export async function buscarProductosParaPedido(
       sku: true,
       barcode: true,
       unidadVenta: true,
+      permiteVentaSuelta: true,
+      pesoPresentacionKg: true,
       stockActual: true,
       precios: {
+        where: { activo: true },
+        select: {
+          metodoPagoId: true,
+          precio: true,
+          metodoPago: { select: { nombre: true, codigo: true } },
+        },
+      },
+      preciosSuelto: {
         where: { activo: true },
         select: {
           metodoPagoId: true,
@@ -53,18 +67,33 @@ export async function buscarProductosParaPedido(
     },
   });
 
+  const mapearPrecios = (
+    precios: {
+      metodoPagoId: string;
+      precio: Prisma.Decimal;
+      metodoPago: { nombre: string; codigo: string };
+    }[],
+  ): PrecioListado[] =>
+    precios.map((precio) => ({
+      metodoPagoId: precio.metodoPagoId,
+      metodo: precio.metodoPago.nombre,
+      codigo: precio.metodoPago.codigo,
+      precio: Number(precio.precio),
+    }));
+
   return productos.map((producto) => ({
     id: producto.id,
     nombre: producto.nombre,
     sku: producto.sku,
     barcode: producto.barcode,
     unidadVenta: producto.unidadVenta,
+    permiteVentaSuelta: producto.permiteVentaSuelta,
+    pesoPresentacionKg:
+      producto.pesoPresentacionKg === null
+        ? null
+        : Number(producto.pesoPresentacionKg),
     stockActual: Number(producto.stockActual),
-    precios: producto.precios.map((precio) => ({
-      metodoPagoId: precio.metodoPagoId,
-      metodo: precio.metodoPago.nombre,
-      codigo: precio.metodoPago.codigo,
-      precio: Number(precio.precio),
-    })),
+    precios: mapearPrecios(producto.precios),
+    preciosSuelto: mapearPrecios(producto.preciosSuelto),
   }));
 }

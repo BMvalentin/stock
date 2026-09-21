@@ -16,7 +16,8 @@ import {
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
 import { formatearCantidad } from "@/lib/utilidades/formatearCantidad";
 import { formatearFechaHora } from "@/lib/utilidades/formatearFechaHora";
-import { SUFIJOS_PRECIO_UNIDAD_VENTA } from "@/constantes/unidadesVenta";
+import { etiquetaModalidadLinea } from "@/lib/utilidades/etiquetaModalidadLinea";
+import { sufijoPrecioModalidadLinea } from "@/lib/utilidades/sufijoPrecioModalidadLinea";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { Tarjeta } from "@/componentes/ui/Tarjeta";
@@ -79,32 +80,63 @@ export default async function PaginaDetallePedido({
                   { encabezado: "Cantidad", alineacion: "der" },
                   { encabezado: "Subtotal", alineacion: "der" },
                 ]}
-                filas={pedido.detalles.map((detalle) => ({
-                  id: detalle.id,
-                  celdas: [
-                    <Link
-                      key="nombre"
-                      href={`/admin/productos/${detalle.productoId}`}
-                      className="text-sm text-zinc-800 hover:underline"
-                    >
-                      {detalle.nombreProducto}
-                    </Link>,
-                    <span key="precio" className="whitespace-nowrap">
-                      {formatearMoneda(detalle.precioUnitario, moneda, locale)}{" "}
-                      {SUFIJOS_PRECIO_UNIDAD_VENTA[detalle.unidadVenta]}
-                    </span>,
-                    <span key="cantidad" className="whitespace-nowrap">
-                      {formatearCantidad(
-                        detalle.cantidad,
-                        detalle.unidadVenta,
-                        locale,
-                      )}
-                    </span>,
-                    <span key="subtotal" className="font-medium text-zinc-900">
-                      {formatearMoneda(detalle.subtotal, moneda, locale)}
-                    </span>,
-                  ],
-                }))}
+                filas={pedido.detalles.map((detalle) => {
+                  const esBolsa =
+                    detalle.pesoPresentacionKg !== null &&
+                    detalle.unidadVenta === "UNIDAD";
+
+                  return {
+                    id: detalle.id,
+                    celdas: [
+                      <div key="nombre" className="min-w-0">
+                        <Link
+                          href={`/admin/productos/${detalle.productoId}`}
+                          className="text-sm text-zinc-800 hover:underline"
+                        >
+                          {detalle.nombreProducto}
+                        </Link>
+                        <p className="text-xs text-zinc-500">
+                          Venta:{" "}
+                          {etiquetaModalidadLinea({
+                            unidadVenta: detalle.unidadVenta,
+                            pesoPresentacionKg: detalle.pesoPresentacionKg,
+                          })}
+                          {esBolsa
+                            ? ` · Presentación ${detalle.pesoPresentacionKg} kg`
+                            : ""}
+                        </p>
+                      </div>,
+                      <span key="precio" className="whitespace-nowrap">
+                        {formatearMoneda(
+                          detalle.precioUnitario,
+                          moneda,
+                          locale,
+                        )}{" "}
+                        {sufijoPrecioModalidadLinea({
+                          unidadVenta: detalle.unidadVenta,
+                          pesoPresentacionKg: detalle.pesoPresentacionKg,
+                        })}
+                      </span>,
+                      <span key="cantidad" className="whitespace-nowrap">
+                        {esBolsa
+                          ? `${detalle.cantidad} ${
+                              detalle.cantidad === 1 ? "bolsa" : "bolsas"
+                            }`
+                          : formatearCantidad(
+                              detalle.cantidad,
+                              detalle.unidadVenta,
+                              locale,
+                            )}
+                      </span>,
+                      <span
+                        key="subtotal"
+                        className="font-medium text-zinc-900"
+                      >
+                        {formatearMoneda(detalle.subtotal, moneda, locale)}
+                      </span>,
+                    ],
+                  };
+                })}
               />
             </div>
 

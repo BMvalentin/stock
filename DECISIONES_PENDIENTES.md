@@ -52,6 +52,7 @@ Estado: `RESUELTA` (ya implementada o acordada), `PENDIENTE` (requiere decisión
 | 45 | ¿Cómo se trata una jornada incompleta en la liquidación? | No se paga ni descuenta retraso hasta que el ADMIN la corrija. Solo se liquidan jornadas con todos los tramos configurados cerrados. |
 | 46 | ¿La corrección manual puede alterar una liquidación cerrada? | No. Una asistencia incluida en una liquidación `CALCULADA`, `PAGADA` o `CANCELADA` no se edita sin anular antes la liquidación. |
 | 47 | ¿Cómo se organizan las rutas internas y el acceso por rol? | Todo el panel vive bajo `/admin/*`. El EMPLEADO accede en solo lectura a dashboard, productos, proveedores, stock, pedidos y su propio fichaje; el resto de `/admin/*` es solo ADMIN (route group `(soloAdmin)` + `requerirAdmin`). Se mantienen redirects temporales desde las rutas anteriores. |
+| 48 | ¿Un producto puede venderse por bolsa y suelto por kg a la vez? | Sí, en un único producto. `Producto.permiteVentaSuelta` + `pesoPresentacionKg`; el precio suelto por kg vive en `PrecioProductoSuelto` (independiente del precio de la bolsa). El stock se lleva en kg y la UI muestra la equivalencia en bolsas. La modalidad vendida se congela en `DetallePedido.unidadVenta` y `pesoPresentacionKg`. |
 
 ## Pendientes
 

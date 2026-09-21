@@ -13,6 +13,7 @@ const MODELOS_A_LIMPIAR = [
   "pedido",
   "precioProductoHistorial",
   "precioProducto",
+  "precioProductoSuelto",
   "productoProveedor",
   "empleadoTarifaProducto",
   "empleadoProduccion",

@@ -27,6 +27,8 @@ export type ProductoListado = {
   barcode: string | null;
   activo: boolean;
   unidadVenta: UnidadVenta;
+  permiteVentaSuelta: boolean;
+  pesoPresentacionKg: number | null;
   stockActual: number;
   stockMinimo: number;
   categoria: string;
@@ -111,6 +113,8 @@ export async function listarProductos(
         barcode: true,
         activo: true,
         unidadVenta: true,
+        permiteVentaSuelta: true,
+        pesoPresentacionKg: true,
         stockActual: true,
         stockMinimo: true,
         imageUrl: true,
@@ -136,6 +140,11 @@ export async function listarProductos(
       barcode: producto.barcode,
       activo: producto.activo,
       unidadVenta: producto.unidadVenta,
+      permiteVentaSuelta: producto.permiteVentaSuelta,
+      pesoPresentacionKg:
+        producto.pesoPresentacionKg === null
+          ? null
+          : Number(producto.pesoPresentacionKg),
       stockActual: Number(producto.stockActual),
       stockMinimo: Number(producto.stockMinimo),
       categoria: producto.categoria.nombre,

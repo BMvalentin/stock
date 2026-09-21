@@ -11,6 +11,7 @@ export type DetallePedidoItem = {
   productoId: string;
   nombreProducto: string;
   unidadVenta: UnidadVenta;
+  pesoPresentacionKg: number | null;
   precioUnitario: number;
   cantidad: number;
   subtotal: number;
@@ -87,6 +88,7 @@ export async function obtenerPedido(
           productoId: true,
           nombreProducto: true,
           unidadVenta: true,
+          pesoPresentacionKg: true,
           precioUnitario: true,
           cantidad: true,
           subtotal: true,
@@ -137,6 +139,10 @@ export async function obtenerPedido(
       productoId: detalle.productoId,
       nombreProducto: detalle.nombreProducto,
       unidadVenta: detalle.unidadVenta,
+      pesoPresentacionKg:
+        detalle.pesoPresentacionKg === null
+          ? null
+          : Number(detalle.pesoPresentacionKg),
       precioUnitario: Number(detalle.precioUnitario),
       cantidad: Number(detalle.cantidad),
       subtotal: Number(detalle.subtotal),

@@ -10,6 +10,8 @@ import {
   SUFIJOS_PRECIO_UNIDAD_VENTA,
 } from "@/constantes/unidadesVenta";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
+import type { UnidadVenta } from "@/generated/prisma/enums";
 import { CampoTexto } from "@/componentes/ui/CampoTexto";
 import { Boton } from "@/componentes/ui/Boton";
 import { Alerta } from "@/componentes/ui/Alerta";
@@ -24,7 +26,7 @@ export function BuscadorProductoPedido({
   moneda,
   locale,
 }: {
-  onSeleccionar: (producto: ProductoParaPedido) => void;
+  onSeleccionar: (producto: ProductoParaPedido, modalidad: UnidadVenta) => void;
   metodoPagoId: string;
   moneda: string;
   locale: string;
@@ -79,22 +81,28 @@ export function BuscadorProductoPedido({
     }
 
     const producto = respuesta.producto;
-    onSeleccionar({
-      id: producto.id,
-      nombre: producto.nombre,
-      sku: producto.sku,
-      barcode: producto.barcode,
-      unidadVenta: producto.unidadVenta,
-      stockActual: producto.stockActual,
-      precios: producto.precios,
-    });
+    onSeleccionar(
+      {
+        id: producto.id,
+        nombre: producto.nombre,
+        sku: producto.sku,
+        barcode: producto.barcode,
+        unidadVenta: producto.unidadVenta,
+        permiteVentaSuelta: producto.permiteVentaSuelta,
+        pesoPresentacionKg: producto.pesoPresentacionKg,
+        stockActual: producto.stockActual,
+        precios: producto.precios,
+        preciosSuelto: producto.preciosSuelto,
+      },
+      producto.unidadVenta,
+    );
     setTermino("");
     setResultados([]);
     setAviso(null);
   }
 
-  function agregar(producto: ProductoParaPedido) {
-    onSeleccionar(producto);
+  function agregar(producto: ProductoParaPedido, modalidad: UnidadVenta) {
+    onSeleccionar(producto, modalidad);
     setTermino("");
     setResultados([]);
     setAviso(null);
@@ -127,6 +135,9 @@ export function BuscadorProductoPedido({
             const precio = producto.precios.find(
               (actual) => actual.metodoPagoId === metodoPagoId,
             );
+            const precioSuelto = producto.preciosSuelto.find(
+              (actual) => actual.metodoPagoId === metodoPagoId,
+            );
 
             return (
               <li
@@ -140,10 +151,15 @@ export function BuscadorProductoPedido({
                   <p className="truncate text-xs text-zinc-500">
                     {ETIQUETAS_UNIDAD_VENTA[producto.unidadVenta]}
                     {producto.sku ? ` · SKU ${producto.sku}` : ""} · Stock{" "}
-                    {producto.stockActual}
+                    {producto.permiteVentaSuelta
+                      ? formatearStockPresentacion(
+                          producto.stockActual,
+                          producto.pesoPresentacionKg,
+                        )
+                      : producto.stockActual}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   <span className="text-sm text-zinc-700">
                     {precio
                       ? `${formatearMoneda(precio.precio, moneda, locale)} ${
@@ -154,11 +170,31 @@ export function BuscadorProductoPedido({
                   <Boton
                     variante="secundario"
                     tamano="sm"
-                    onClick={() => agregar(producto)}
+                    onClick={() => agregar(producto, producto.unidadVenta)}
                   >
                     <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-                    Agregar
+                    {producto.permiteVentaSuelta &&
+                    producto.pesoPresentacionKg
+                      ? `Bolsa ${producto.pesoPresentacionKg} kg`
+                      : "Agregar"}
                   </Boton>
+                  {producto.permiteVentaSuelta ? (
+                    <Boton
+                      variante="secundario"
+                      tamano="sm"
+                      onClick={() => agregar(producto, "KILOGRAMO")}
+                      disabled={!precioSuelto}
+                    >
+                      <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                      {precioSuelto
+                        ? `Suelto ${formatearMoneda(
+                            precioSuelto.precio,
+                            moneda,
+                            locale,
+                          )}/kg`
+                        : "Suelto sin precio"}
+                    </Boton>
+                  ) : null}
                 </div>
               </li>
             );

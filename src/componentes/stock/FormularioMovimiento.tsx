@@ -67,8 +67,9 @@ export function FormularioMovimiento({
           etiqueta="Cantidad"
           name="cantidad"
           type="number"
-          min="1"
-          step="1"
+          min="0.001"
+          step="0.001"
+          ayuda="En kg para productos con venta suelta; en unidades para el resto."
           requerido
           error={estado.errores?.cantidad?.[0]}
         />

@@ -7,11 +7,11 @@ import type { LineaCalculada } from "@/servicios/pedidos/calcularTotalesPedido";
 // concurrencia) ocurre al pasar el pedido a CONFIRMADO.
 export function validarStockPedido(lineas: LineaCalculada[]): void {
   for (const linea of lineas) {
-    if (linea.stockActual.lt(linea.cantidad)) {
+    if (linea.stockActual.lt(linea.cantidadStock)) {
       throw new ErrorNegocio(
         `No hay stock suficiente de ${linea.nombreProducto}. Disponible: ${formatearCantidad(
           linea.stockActual.toNumber(),
-          linea.unidadVenta,
+          linea.unidadStock,
         )}.`,
       );
     }

@@ -5,7 +5,7 @@ import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { calcularTotalesPedido } from "@/servicios/pedidos/calcularTotalesPedido";
 import { calcularCostoEnvio } from "@/servicios/configuracion/calcularCostoEnvio";
 import type { ResumenPedidoCalculado } from "@/tipos/pedidoFormulario";
-import type { TipoEntrega } from "@/generated/prisma/enums";
+import type { TipoEntrega, UnidadVenta } from "@/generated/prisma/enums";
 
 export type ResultadoResumenPedido =
   | { ok: true; resumen: ResumenPedidoCalculado }
@@ -22,7 +22,7 @@ const RESUMEN_VACIO: ResumenPedidoCalculado = {
 // formulario. Reutiliza los mismos servicios que la creación: el cliente nunca
 // determina precios ni envío.
 export async function accionCalcularResumenPedido(
-  lineas: { productoId: string; cantidad: number }[],
+  lineas: { productoId: string; cantidad: number; modalidad?: UnidadVenta }[],
   metodoPagoId: string,
   tipoEntrega: TipoEntrega,
 ): Promise<ResultadoResumenPedido> {
@@ -46,7 +46,7 @@ export async function accionCalcularResumenPedido(
       tipoEntrega,
       calculadas.map((linea) => ({
         cantidad: linea.cantidad.toNumber(),
-        unidadesPorBulto: linea.unidadesPorBulto,
+        bultos: linea.bultos.toNumber(),
       })),
     );
 
@@ -57,6 +57,10 @@ export async function accionCalcularResumenPedido(
           productoId: linea.productoId,
           nombreProducto: linea.nombreProducto,
           unidadVenta: linea.unidadVenta,
+          pesoPresentacionKg:
+            linea.pesoPresentacionKg === null
+              ? null
+              : linea.pesoPresentacionKg.toNumber(),
           precioUnitario: linea.precioUnitario.toNumber(),
           cantidad: linea.cantidad.toNumber(),
           subtotal: linea.subtotal.toNumber(),

@@ -10,6 +10,7 @@ import {
   TONOS_ESTADO_STOCK,
 } from "@/constantes/estadoStock";
 import { formatearFechaHora } from "@/lib/utilidades/formatearFechaHora";
+import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
 import { TablaDatos } from "@/componentes/tablas/TablaDatos";
 import { Etiqueta } from "@/componentes/ui/Etiqueta";
 import { EstadoVacio } from "@/componentes/ui/EstadoVacio";
@@ -68,10 +69,17 @@ export function TablaStock({
               {producto.categoria}
             </span>,
             <span key="actual" className="text-sm font-medium text-zinc-900">
-              {producto.stockActual}
+              {producto.permiteVentaSuelta
+                ? formatearStockPresentacion(
+                    producto.stockActual,
+                    producto.pesoPresentacionKg,
+                  )
+                : producto.stockActual}
             </span>,
             <span key="minimo" className="text-sm text-zinc-500">
-              {producto.stockMinimo}
+              {producto.permiteVentaSuelta
+                ? `${producto.stockMinimo} kg`
+                : producto.stockMinimo}
             </span>,
             <Etiqueta key="estado" tono={TONOS_ESTADO_STOCK[estado]}>
               {ETIQUETAS_ESTADO_STOCK[estado]}

@@ -16,6 +16,7 @@ import {
   TONOS_TIPO_MOVIMIENTO,
 } from "@/constantes/tiposMovimiento";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
 import { formatearFechaHora } from "@/lib/utilidades/formatearFechaHora";
 import { urlImagenCloudinary } from "@/lib/utilidades/urlImagenCloudinary";
 import { TAMANO_DETALLE_PRODUCTO } from "@/constantes/imagenes";
@@ -108,10 +109,17 @@ export default async function PaginaDetalleProducto({
             <Dato etiqueta="Categoría" valor={producto.categoria} />
             <Dato etiqueta="SKU" valor={producto.sku} />
             <Dato etiqueta="Código de barras" valor={producto.barcode} />
-            <Dato
-              etiqueta="Unidades por bulto"
-              valor={producto.unidadesPorBulto}
-            />
+            {producto.permiteVentaSuelta ? (
+              <Dato
+                etiqueta="Peso de la presentación"
+                valor={`${producto.pesoPresentacionKg ?? "—"} kg`}
+              />
+            ) : (
+              <Dato
+                etiqueta="Unidades por bulto"
+                valor={producto.unidadesPorBulto}
+              />
+            )}
             <Dato etiqueta="Descripción" valor={producto.descripcion} />
           </dl>
         </Tarjeta>
@@ -122,10 +130,18 @@ export default async function PaginaDetalleProducto({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-semibold text-zinc-900">
-                  {producto.stockActual}
+                  {producto.permiteVentaSuelta
+                    ? formatearStockPresentacion(
+                        producto.stockActual,
+                        producto.pesoPresentacionKg,
+                      )
+                    : producto.stockActual}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  Mínimo: {producto.stockMinimo}
+                  Mínimo:{" "}
+                  {producto.permiteVentaSuelta
+                    ? `${producto.stockMinimo} kg`
+                    : producto.stockMinimo}
                 </p>
               </div>
               <Etiqueta tono={TONOS_ESTADO_STOCK[estado]}>
@@ -144,27 +160,73 @@ export default async function PaginaDetalleProducto({
         </Tarjeta>
 
         <Tarjeta className="p-5">
-          <h2 className="text-sm font-semibold text-zinc-900">Precios</h2>
-          <dl className="mt-4 space-y-2 text-sm">
-            {producto.precios.length === 0 ? (
-              <p className="text-zinc-500">Sin precios cargados.</p>
-            ) : (
-              producto.precios.map((precio) => (
-                <div
-                  key={precio.metodoPagoId}
-                  className="flex items-center justify-between"
-                >
-                  <dt className="text-zinc-500">{precio.metodo}</dt>
-                  <dd className="font-medium text-zinc-900">
-                    {formatearMoneda(
-                      precio.precio,
-                      configuracion.moneda,
-                      configuracion.locale,
-                    )}
-                  </dd>
-                </div>
-              ))
-            )}
+          <h2 className="text-sm font-semibold text-zinc-900">Venta</h2>
+          <dl className="mt-4 space-y-3 text-sm">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-zinc-400">
+                {producto.unidadVenta === "KILOGRAMO"
+                  ? "Por kg"
+                  : producto.pesoPresentacionKg
+                    ? `Bolsa de ${producto.pesoPresentacionKg} kg`
+                    : "Por unidad"}
+              </dt>
+              <dd className="mt-1 space-y-1">
+                {producto.precios.length === 0 ? (
+                  <p className="text-zinc-500">Sin precios cargados.</p>
+                ) : (
+                  producto.precios.map((precio) => (
+                    <div
+                      key={precio.metodoPagoId}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-zinc-500">{precio.metodo}</span>
+                      <span className="font-medium text-zinc-900">
+                        {formatearMoneda(
+                          precio.precio,
+                          configuracion.moneda,
+                          configuracion.locale,
+                        )}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </dd>
+            </div>
+
+            {producto.unidadVenta === "UNIDAD" ? (
+              <div className="border-t border-zinc-100 pt-3">
+                <dt className="text-xs uppercase tracking-wide text-zinc-400">
+                  Venta suelta
+                </dt>
+                <dd className="mt-1">
+                  {producto.permiteVentaSuelta &&
+                  producto.preciosSuelto.length > 0 ? (
+                    <div className="space-y-1">
+                      {producto.preciosSuelto.map((precio) => (
+                        <div
+                          key={precio.metodoPagoId}
+                          className="flex items-center justify-between"
+                        >
+                          <span className="text-zinc-500">{precio.metodo}</span>
+                          <span className="font-medium text-zinc-900">
+                            {formatearMoneda(
+                              precio.precio,
+                              configuracion.moneda,
+                              configuracion.locale,
+                            )}{" "}
+                            <span className="font-normal text-zinc-400">
+                              / kg
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-zinc-500">No disponible</span>
+                  )}
+                </dd>
+              </div>
+            ) : null}
           </dl>
         </Tarjeta>
       </div>

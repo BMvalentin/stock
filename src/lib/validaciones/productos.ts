@@ -40,32 +40,73 @@ const skuOpcional = z
   .optional()
   .transform((valor) => (valor ? valor : undefined));
 
-export const esquemaProducto = z.object({
-  barcode: barcodeOpcional,
-  nombre: z
-    .string()
-    .trim()
-    .min(1, "El nombre es obligatorio")
-    .max(150, "Máximo 150 caracteres"),
-  descripcion: descripcionOpcional,
-  sku: skuOpcional,
-  categoriaId: z.string().min(1, "Seleccioná una categoría"),
-  unidadVenta: z.enum(["UNIDAD", "KILOGRAMO"], {
-    message: "Modalidad de venta inválida",
-  }),
-  stockMinimo: z.coerce
+// Peso de la presentación en kg. Es opcional en general, pero obligatorio
+// cuando el producto permite venta suelta (se valida en `superRefine`).
+const pesoPresentacionOpcional = z.preprocess(
+  (valor) => (valor === "" || valor === null ? undefined : valor),
+  z.coerce
     .number()
-    .min(0, "No puede ser negativo")
-    .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
-  unidadesPorBulto: z.coerce
-    .number()
-    .int("Debe ser un número entero")
-    .min(1, "El mínimo es 1"),
-});
+    .positive("Debe ser mayor a cero")
+    .refine(tieneMaximoTresDecimales, "Máximo 3 decimales")
+    .optional(),
+);
+
+export const esquemaProducto = z
+  .object({
+    barcode: barcodeOpcional,
+    nombre: z
+      .string()
+      .trim()
+      .min(1, "El nombre es obligatorio")
+      .max(150, "Máximo 150 caracteres"),
+    descripcion: descripcionOpcional,
+    sku: skuOpcional,
+    categoriaId: z.string().min(1, "Seleccioná una categoría"),
+    unidadVenta: z.enum(["UNIDAD", "KILOGRAMO"], {
+      message: "Modalidad de venta inválida",
+    }),
+    permiteVentaSuelta: z.boolean().default(false),
+    pesoPresentacionKg: pesoPresentacionOpcional,
+    stockMinimo: z.coerce
+      .number()
+      .min(0, "No puede ser negativo")
+      .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
+    unidadesPorBulto: z.coerce
+      .number()
+      .int("Debe ser un número entero")
+      .min(1, "El mínimo es 1"),
+  })
+  .superRefine((datos, ctx) => {
+    if (!datos.permiteVentaSuelta) return;
+
+    if (datos.unidadVenta !== "UNIDAD") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["permiteVentaSuelta"],
+        message:
+          "La venta suelta solo aplica a productos vendidos por unidad o presentación.",
+      });
+    }
+
+    if (datos.pesoPresentacionKg === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pesoPresentacionKg"],
+        message: "Indicá el peso de la presentación para la venta suelta.",
+      });
+    }
+  });
 
 export const esquemaPrecioProducto = z.object({
   metodoPagoId: z.string().min(1),
   precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
+});
+
+// Precio de venta suelta por kg: obligatorio y mayor a cero cuando la venta
+// suelta está habilitada.
+export const esquemaPrecioProductoSuelto = z.object({
+  metodoPagoId: z.string().min(1),
+  precio: z.coerce.number().positive("El precio por kg debe ser mayor a cero"),
 });
 
 export const esquemaStockInicial = z.coerce
