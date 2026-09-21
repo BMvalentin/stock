@@ -142,6 +142,12 @@ Ver `.env.example`. `DATABASE_URL` y `AUTH_SECRET` son obligatorias.
 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` son opcionales: si faltan, el
 proveedor de Google no se registra y el botón no se muestra.
 
+`AUTH_URL` **no** es necesaria y no debe configurarse en Vercel: `trustHost: true`
+en `src/auth.ts` resuelve el host desde `x-forwarded-host`. Definirla con
+`localhost` en producción hace que Google reciba
+`http://localhost:3000/api/auth/callback/google` y el login falla con
+`error=Configuration`. En local puede usarse `AUTH_URL="http://localhost:3000"`.
+
 ## Módulo de remuneración de empleados
 
 - `Empleado` es un perfil 1:1 con `User` (`userId @unique`). Separa los datos

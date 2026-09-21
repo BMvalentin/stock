@@ -63,6 +63,12 @@ Configurar las credenciales en Google Cloud Console y definir
 `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Si faltan, el botón "Continuar con
 Google" no se muestra y el proveedor no se registra.
 
+En Vercel **no** definir `AUTH_URL` ni `NEXTAUTH_URL`: `trustHost: true` en
+`src/auth.ts` resuelve el host con `x-forwarded-host`, por lo que Production y
+Preview funcionan sin fijar la URL. Definir `AUTH_URL` con `localhost` rompe el
+login con Google en producción (Google recibe un `redirect_uri` inválido). Solo
+en desarrollo local es válido `AUTH_URL="http://localhost:3000"`.
+
 ## Roles
 
 - **ADMIN**: acceso completo.
