@@ -138,8 +138,9 @@ export function BuscadorProductoPedido({
                     {producto.nombre}
                   </p>
                   <p className="truncate text-xs text-zinc-500">
-                    {ETIQUETAS_UNIDAD_VENTA[producto.unidadVenta]} · SKU{" "}
-                    {producto.sku} · Stock {producto.stockActual}
+                    {ETIQUETAS_UNIDAD_VENTA[producto.unidadVenta]}
+                    {producto.sku ? ` · SKU ${producto.sku}` : ""} · Stock{" "}
+                    {producto.stockActual}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

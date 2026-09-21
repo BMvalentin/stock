@@ -6,7 +6,7 @@ import type { UnidadVenta } from "@/generated/prisma/enums";
 export type LineaPedidoUI = {
   productoId: string;
   nombre: string;
-  sku: string;
+  sku: string | null;
   unidadVenta: UnidadVenta;
   cantidad: number;
   precios: PrecioListado[];

@@ -8,7 +8,7 @@ import type { UnidadVenta } from "@/generated/prisma/enums";
 export type DatosProducto = {
   nombre: string;
   descripcion?: string;
-  sku: string;
+  sku: string | null;
   barcode?: string;
   categoriaId: string;
   unidadVenta: UnidadVenta;
@@ -24,13 +24,15 @@ export async function crearProducto(
   datos: DatosProducto & { stockInicial: number },
   usuarioId: string,
 ): Promise<{ id: string }> {
-  const skuExistente = await prisma.producto.findUnique({
-    where: { sku: datos.sku },
-    select: { id: true },
-  });
+  if (datos.sku) {
+    const skuExistente = await prisma.producto.findUnique({
+      where: { sku: datos.sku },
+      select: { id: true },
+    });
 
-  if (skuExistente) {
-    throw new ErrorNegocio("Ya existe un producto con ese SKU.");
+    if (skuExistente) {
+      throw new ErrorNegocio("Ya existe un producto con ese SKU.");
+    }
   }
 
   if (datos.barcode) {

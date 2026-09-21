@@ -23,7 +23,7 @@ export type PrecioListado = {
 export type ProductoListado = {
   id: string;
   nombre: string;
-  sku: string;
+  sku: string | null;
   barcode: string | null;
   activo: boolean;
   unidadVenta: UnidadVenta;

@@ -41,7 +41,8 @@ export function ListaStockCritico({
                   {producto.nombre}
                 </p>
                 <p className="truncate text-xs text-zinc-500">
-                  {producto.categoria} · {producto.sku}
+                  {producto.categoria}
+                  {producto.sku ? ` · ${producto.sku}` : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">

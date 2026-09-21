@@ -56,7 +56,8 @@ export function ResumenProductoBarcode({
           {producto.nombre}
         </Link>
         <p className="truncate text-xs text-zinc-500">
-          {producto.categoria} · SKU {producto.sku}
+          {producto.categoria}
+          {producto.sku ? ` · SKU ${producto.sku}` : ""}
         </p>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-600">

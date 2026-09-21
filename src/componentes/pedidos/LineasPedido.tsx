@@ -56,7 +56,8 @@ export function LineasPedido({
                   {linea.nombre}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  {ETIQUETAS_UNIDAD_VENTA[linea.unidadVenta]} · SKU {linea.sku}
+                  {ETIQUETAS_UNIDAD_VENTA[linea.unidadVenta]}
+                  {linea.sku ? ` · SKU ${linea.sku}` : ""}
                 </p>
                 <p className="text-xs text-zinc-500">
                   Precio:{" "}

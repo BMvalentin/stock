@@ -54,7 +54,11 @@ export default async function PaginaDetalleProducto({
     <div className="space-y-6">
       <EncabezadoPagina
         titulo={producto.nombre}
-        descripcion={`SKU ${producto.sku} · ${producto.categoria}`}
+        descripcion={
+          producto.sku
+            ? `SKU ${producto.sku} · ${producto.categoria}`
+            : producto.categoria
+        }
         acciones={
           <div className="flex flex-wrap items-center gap-2">
             <EnlaceBoton href="/admin/productos" variante="secundario">

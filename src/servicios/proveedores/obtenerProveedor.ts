@@ -7,7 +7,7 @@ import type {
 export type ProductoDeProveedor = {
   id: string;
   nombre: string;
-  sku: string;
+  sku: string | null;
   stockActual: number;
   esPrincipal: boolean;
   codigoProveedor: string | null;

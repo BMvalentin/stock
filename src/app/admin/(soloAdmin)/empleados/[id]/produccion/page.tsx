@@ -55,7 +55,9 @@ export default async function PaginaProduccionEmpleado({
     .filter((tarifa) => tarifa.activo)
     .map((tarifa) => ({
       valor: tarifa.productoId,
-      etiqueta: `${tarifa.productoNombre} (${tarifa.productoSku})`,
+      etiqueta: tarifa.productoSku
+        ? `${tarifa.productoNombre} (${tarifa.productoSku})`
+        : tarifa.productoNombre,
     }));
 
   const fechaHoy = fechaHoyCalendario().toISOString().slice(0, 10);

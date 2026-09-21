@@ -36,13 +36,15 @@ export async function actualizarProducto(
     throw new ErrorNegocio("El producto no existe.");
   }
 
-  const skuDuplicado = await prisma.producto.findFirst({
-    where: { sku: datos.sku, NOT: { id } },
-    select: { id: true },
-  });
+  if (datos.sku) {
+    const skuDuplicado = await prisma.producto.findFirst({
+      where: { sku: datos.sku, NOT: { id } },
+      select: { id: true },
+    });
 
-  if (skuDuplicado) {
-    throw new ErrorNegocio("Ya existe otro producto con ese SKU.");
+    if (skuDuplicado) {
+      throw new ErrorNegocio("Ya existe otro producto con ese SKU.");
+    }
   }
 
   if (datos.barcode) {

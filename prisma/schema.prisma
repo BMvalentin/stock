@@ -118,7 +118,10 @@ model Producto {
   id               String   @id @default(cuid())
   nombre           String
   descripcion      String?
-  sku              String   @unique
+  // SKU opcional. En MySQL/TiDB un índice único admite múltiples NULL, por lo
+  // que varios productos pueden no tener SKU sin bloquearse entre sí, pero los
+  // SKU ingresados siguen siendo únicos.
+  sku              String?  @unique
   // Código de barras comercial (EAN/UPC/Code 128). Independiente del SKU.
   // Opcional: no todos los productos tienen código. En MySQL un índice único
   // admite múltiples NULL, por lo que no bloquea productos sin barcode.

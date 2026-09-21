@@ -31,7 +31,7 @@ export default async function PaginaEditarProducto({
     <div className="space-y-6">
       <EncabezadoPagina
         titulo={`Editar ${producto.nombre}`}
-        descripcion={`SKU ${producto.sku}`}
+        descripcion={producto.sku ? `SKU ${producto.sku}` : undefined}
       />
       <FormularioProducto
         producto={producto}

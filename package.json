@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
+    "limpiar:datos-prueba": "tsx prisma/scripts/limpiar-datos-prueba.ts",
     "test": "node --import tsx --test src/servicios/asistencias/asistencia.test.ts src/servicios/liquidaciones/remuneracion.test.ts"
   },
   "engines": {

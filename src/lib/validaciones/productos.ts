@@ -31,6 +31,15 @@ const barcodeOpcional = z
     MENSAJE_BARCODE,
   );
 
+// SKU opcional: si se ingresa se valida y conserva; si queda vacío se normaliza
+// a `undefined` para persistirlo como NULL.
+const skuOpcional = z
+  .string()
+  .trim()
+  .max(50, "Máximo 50 caracteres")
+  .optional()
+  .transform((valor) => (valor ? valor : undefined));
+
 export const esquemaProducto = z.object({
   barcode: barcodeOpcional,
   nombre: z
@@ -39,11 +48,7 @@ export const esquemaProducto = z.object({
     .min(1, "El nombre es obligatorio")
     .max(150, "Máximo 150 caracteres"),
   descripcion: descripcionOpcional,
-  sku: z
-    .string()
-    .trim()
-    .min(1, "El SKU es obligatorio")
-    .max(50, "Máximo 50 caracteres"),
+  sku: skuOpcional,
   categoriaId: z.string().min(1, "Seleccioná una categoría"),
   unidadVenta: z.enum(["UNIDAD", "KILOGRAMO"], {
     message: "Modalidad de venta inválida",

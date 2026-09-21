@@ -18,7 +18,7 @@ export type ProductoDetalle = {
   id: string;
   nombre: string;
   descripcion: string | null;
-  sku: string;
+  sku: string | null;
   barcode: string | null;
   activo: boolean;
   unidadVenta: UnidadVenta;

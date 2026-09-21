@@ -111,7 +111,7 @@ export function SeccionTarifas({
                     {tarifa.productoNombre}
                   </p>
                   <p className="truncate text-xs text-zinc-500">
-                    {tarifa.productoSku}
+                    {tarifa.productoSku ?? "—"}
                   </p>
                 </div>,
                 <span key="precio" className="font-medium text-zinc-900">

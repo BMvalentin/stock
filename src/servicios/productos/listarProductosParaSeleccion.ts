@@ -12,6 +12,8 @@ export async function listarProductosParaSeleccion(): Promise<OpcionCampo[]> {
 
   return productos.map((producto) => ({
     valor: producto.id,
-    etiqueta: `${producto.nombre} (${producto.sku})`,
+    etiqueta: producto.sku
+      ? `${producto.nombre} (${producto.sku})`
+      : producto.nombre,
   }));
 }

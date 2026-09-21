@@ -5,7 +5,7 @@ export type TarifaProductoListado = {
   id: string;
   productoId: string;
   productoNombre: string;
-  productoSku: string;
+  productoSku: string | null;
   precioUnidad: Prisma.Decimal;
   activo: boolean;
 };

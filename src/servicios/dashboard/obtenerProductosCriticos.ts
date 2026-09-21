@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma/cliente";
 export type ProductoCritico = {
   id: string;
   nombre: string;
-  sku: string;
+  sku: string | null;
   categoria: string;
   stockActual: number;
   stockMinimo: number;

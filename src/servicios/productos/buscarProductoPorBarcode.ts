@@ -5,7 +5,7 @@ import type { UnidadVenta } from "@/generated/prisma/enums";
 export type ProductoPorBarcode = {
   id: string;
   nombre: string;
-  sku: string;
+  sku: string | null;
   barcode: string;
   activo: boolean;
   unidadVenta: UnidadVenta;

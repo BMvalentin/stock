@@ -90,7 +90,7 @@ export function FormularioProducto({
             etiqueta="SKU"
             name="sku"
             defaultValue={producto?.sku ?? ""}
-            requerido
+            ayuda="Opcional."
             error={estado.errores?.sku?.[0]}
           />
         </div>

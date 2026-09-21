@@ -26,7 +26,7 @@ export async function parsearProducto(
   const resultado = esquemaProducto.safeParse({
     nombre: formData.get("nombre"),
     descripcion: formData.get("descripcion"),
-    sku: formData.get("sku"),
+    sku: formData.get("sku") ?? "",
     barcode: formData.get("barcode") ?? "",
     categoriaId: formData.get("categoriaId"),
     unidadVenta: formData.get("unidadVenta") ?? "UNIDAD",
@@ -100,7 +100,7 @@ export async function parsearProducto(
     datos: {
       nombre: resultado.data.nombre,
       descripcion: resultado.data.descripcion,
-      sku: resultado.data.sku,
+      sku: resultado.data.sku ?? null,
       barcode: resultado.data.barcode,
       categoriaId: resultado.data.categoriaId,
       unidadVenta: resultado.data.unidadVenta,

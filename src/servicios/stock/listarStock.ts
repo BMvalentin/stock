@@ -13,7 +13,7 @@ export type FiltrosStock = {
 export type ProductoStock = {
   id: string;
   nombre: string;
-  sku: string;
+  sku: string | null;
   categoria: string;
   stockActual: number;
   stockMinimo: number;
