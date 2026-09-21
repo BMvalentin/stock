@@ -9,7 +9,7 @@ export default async function PaginaLogin() {
   const sesion = await auth();
 
   if (sesion?.user) {
-    redirect("/dashboard");
+    redirect("/admin");
   }
 
   return (

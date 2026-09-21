@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ITEMS_NAVEGACION } from "@/constantes/navegacion";
+import { puedeAcceder } from "@/lib/seguridad/puedeAcceder";
 import { cn } from "@/lib/utilidades/cn";
 import type { Rol } from "@/generated/prisma/enums";
 
@@ -14,9 +15,7 @@ export function BarraLateral({
   alNavegar?: () => void;
 }) {
   const rutaActual = usePathname();
-  const items = ITEMS_NAVEGACION.filter(
-    (item) => !item.soloAdmin || rol === "ADMIN",
-  );
+  const items = ITEMS_NAVEGACION.filter((item) => puedeAcceder(rol, item.ruta));
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -31,9 +30,13 @@ export function BarraLateral({
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {items.map((item) => {
+          // El dashboard vive en /admin: solo se marca activo con coincidencia
+          // exacta para no resaltarlo en todas las secciones hijas.
           const activo =
-            rutaActual === item.ruta ||
-            rutaActual.startsWith(`${item.ruta}/`);
+            item.ruta === "/admin"
+              ? rutaActual === "/admin"
+              : rutaActual === item.ruta ||
+                rutaActual.startsWith(`${item.ruta}/`);
           const Icono = item.icono;
 
           return (

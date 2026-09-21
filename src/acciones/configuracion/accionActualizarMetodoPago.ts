@@ -32,6 +32,6 @@ export async function accionActualizarMetodoPago(
     throw error;
   }
 
-  revalidatePath("/configuracion");
+  revalidatePath("/admin/configuracion");
   return { exito: true, mensaje: "Método de pago actualizado." };
 }

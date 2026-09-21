@@ -33,7 +33,7 @@ export function ListaStockCritico({
         return (
           <li key={producto.id}>
             <Link
-              href={`/productos/${producto.id}`}
+              href={`/admin/productos/${producto.id}`}
               className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
             >
               <div className="min-w-0">

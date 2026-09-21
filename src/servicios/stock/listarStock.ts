@@ -33,10 +33,12 @@ export async function listarStock(
     ...(filtros.categoriaId ? { categoriaId: filtros.categoriaId } : {}),
     ...(filtros.busqueda
       ? {
+          // `startsWith` en sku/barcode usa los índices únicos; el nombre se
+          // busca por contenido (no usa índice btree, aceptable a esta escala).
           OR: [
             { nombre: { contains: filtros.busqueda } },
-            { sku: { contains: filtros.busqueda } },
-            { barcode: { contains: filtros.busqueda } },
+            { sku: { startsWith: filtros.busqueda } },
+            { barcode: { startsWith: filtros.busqueda } },
           ],
         }
       : {}),

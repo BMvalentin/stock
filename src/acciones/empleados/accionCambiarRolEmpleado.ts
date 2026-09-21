@@ -25,7 +25,7 @@ export async function accionCambiarRolEmpleado(
     throw error;
   }
 
-  revalidatePath("/empleados");
-  revalidatePath("/auditoria");
+  revalidatePath("/admin/empleados");
+  revalidatePath("/admin/auditoria");
   return {};
 }

@@ -12,45 +12,69 @@ export type ProduccionListado = {
   liquidacionId: string | null;
 };
 
-// Producciones de un empleado, opcionalmente acotadas a un período.
+export type FiltrosProducciones = {
+  desde?: Date;
+  hasta?: Date;
+  productoId?: string;
+  pagina: number;
+  porPagina: number;
+};
+
+export type ResultadoProducciones = {
+  producciones: ProduccionListado[];
+  total: number;
+};
+
+// Producciones de un empleado, paginadas en la base y opcionalmente acotadas a
+// un período o a un producto.
 export async function listarProducciones(
   empleadoId: string,
-  opciones?: { desde?: Date; hasta?: Date; limite?: number },
-): Promise<ProduccionListado[]> {
-  const producciones = await prisma.empleadoProduccion.findMany({
-    where: {
-      empleadoId,
-      ...(opciones?.desde || opciones?.hasta
-        ? {
-            fecha: {
-              ...(opciones?.desde ? { gte: opciones.desde } : {}),
-              ...(opciones?.hasta ? { lte: opciones.hasta } : {}),
-            },
-          }
-        : {}),
-    },
-    orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-    take: opciones?.limite,
-    select: {
-      id: true,
-      fecha: true,
-      cantidad: true,
-      precioUnidad: true,
-      total: true,
-      productoId: true,
-      liquidacionId: true,
-      producto: { select: { nombre: true } },
-    },
-  });
+  filtros: FiltrosProducciones,
+): Promise<ResultadoProducciones> {
+  const where: Prisma.EmpleadoProduccionWhereInput = {
+    empleadoId,
+    ...(filtros.productoId ? { productoId: filtros.productoId } : {}),
+    ...(filtros.desde || filtros.hasta
+      ? {
+          fecha: {
+            ...(filtros.desde ? { gte: filtros.desde } : {}),
+            ...(filtros.hasta ? { lte: filtros.hasta } : {}),
+          },
+        }
+      : {}),
+  };
 
-  return producciones.map((produccion) => ({
-    id: produccion.id,
-    fecha: produccion.fecha,
-    cantidad: produccion.cantidad,
-    precioUnidad: produccion.precioUnidad,
-    total: produccion.total,
-    productoId: produccion.productoId,
-    productoNombre: produccion.producto.nombre,
-    liquidacionId: produccion.liquidacionId,
-  }));
+  const [total, producciones] = await Promise.all([
+    prisma.empleadoProduccion.count({ where }),
+    prisma.empleadoProduccion.findMany({
+      where,
+      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
+      skip: (filtros.pagina - 1) * filtros.porPagina,
+      take: filtros.porPagina,
+      select: {
+        id: true,
+        fecha: true,
+        cantidad: true,
+        precioUnidad: true,
+        total: true,
+        productoId: true,
+        liquidacionId: true,
+        producto: { select: { nombre: true } },
+      },
+    }),
+  ]);
+
+  return {
+    total,
+    producciones: producciones.map((produccion) => ({
+      id: produccion.id,
+      fecha: produccion.fecha,
+      cantidad: produccion.cantidad,
+      precioUnidad: produccion.precioUnidad,
+      total: produccion.total,
+      productoId: produccion.productoId,
+      productoNombre: produccion.producto.nombre,
+      liquidacionId: produccion.liquidacionId,
+    })),
+  };
 }

@@ -31,8 +31,8 @@ export async function accionRegistrarProduccion(
       usuario.id,
     );
 
-    revalidatePath("/empleados");
-    revalidatePath(`/empleados/${userId}/produccion`);
+    revalidatePath("/admin/empleados");
+    revalidatePath(`/admin/empleados/${userId}/produccion`);
 
     return { exito: true, mensaje: `Producción registrada. Total: $${total}` };
   } catch (error) {

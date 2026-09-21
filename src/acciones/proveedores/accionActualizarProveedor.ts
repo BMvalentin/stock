@@ -37,7 +37,7 @@ export async function accionActualizarProveedor(
     throw error;
   }
 
-  revalidatePath("/proveedores");
-  revalidatePath(`/proveedores/${id}`);
+  revalidatePath("/admin/proveedores");
+  revalidatePath(`/admin/proveedores/${id}`);
   return { exito: true, mensaje: "Proveedor actualizado." };
 }

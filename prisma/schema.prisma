@@ -44,6 +44,8 @@ model User {
 
   @@index([rol])
   @@index([activo])
+  // Listado de empleados: filtra por estado/rol y ordena por nombre.
+  @@index([activo, rol, name])
 }
 
 model Account {
@@ -108,6 +110,8 @@ model Categoria {
   productos Producto[]
 
   @@index([activo])
+  // Listado de categorías: orden por estado y nombre.
+  @@index([activo, nombre])
 }
 
 model Producto {
@@ -227,6 +231,8 @@ model Proveedor {
 
   @@index([nombre])
   @@index([activo])
+  // Listado de proveedores: orden por estado y nombre.
+  @@index([activo, nombre])
 }
 
 // Medio de pago con el que se utilizará una cuenta del proveedor. Es un enum
@@ -326,6 +332,9 @@ model MovimientoStock {
   @@index([tipo])
   @@index([usuarioId])
   @@index([pedidoId])
+  // Listado de movimientos: filtra por tipo/usuario y ordena por fecha.
+  @@index([tipo, createdAt])
+  @@index([usuarioId, createdAt])
 }
 
 // ============================================================
@@ -395,6 +404,9 @@ model Pedido {
   @@index([estadoPago])
   @@index([createdAt])
   @@index([usuarioId])
+  // Listado de pedidos: filtra por estado/pago y ordena por fecha.
+  @@index([estado, createdAt])
+  @@index([estadoPago, createdAt])
 }
 
 model DetallePedido {
@@ -489,6 +501,10 @@ model Auditoria {
   @@index([entidad, entidadId])
   @@index([usuarioId])
   @@index([accion])
+  // Listado de auditoría: filtra y ordena por fecha descendente.
+  @@index([usuarioId, createdAt])
+  @@index([accion, createdAt])
+  @@index([entidad, createdAt])
 }
 
 // ============================================================
@@ -661,6 +677,8 @@ model EmpleadoLiquidacion {
   @@unique([empleadoId, desde, hasta])
   @@index([empleadoId, desde])
   @@index([estado])
+  // Historial de liquidaciones de un empleado filtrado por estado.
+  @@index([empleadoId, estado])
 }
 
 // Token temporal que habilita el fichaje por QR. La pantalla del comercio lo

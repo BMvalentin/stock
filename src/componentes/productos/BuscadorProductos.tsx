@@ -32,7 +32,7 @@ export function BuscadorProductos({ valorInicial }: { valorInicial?: string }) {
       }
 
       if (respuesta.producto) {
-        router.push(`/productos/${respuesta.producto.id}`);
+        router.push(`/admin/productos/${respuesta.producto.id}`);
         return;
       }
 
@@ -77,7 +77,7 @@ export function BuscadorProductos({ valorInicial }: { valorInicial?: string }) {
               </Boton>
               <EnlaceBoton
                 variante="primario"
-                href={`/productos/nuevo?barcode=${encodeURIComponent(
+                href={`/admin/productos/nuevo?barcode=${encodeURIComponent(
                   resultado.codigo,
                 )}`}
               >

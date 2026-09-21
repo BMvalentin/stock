@@ -30,8 +30,8 @@ export async function accionCambiarEstadoPago(
     throw error;
   }
 
-  revalidatePath("/pedidos");
-  revalidatePath(`/pedidos/${id}`);
-  revalidatePath("/dashboard");
+  revalidatePath("/admin/pedidos");
+  revalidatePath(`/admin/pedidos/${id}`);
+  revalidatePath("/admin");
   return {};
 }

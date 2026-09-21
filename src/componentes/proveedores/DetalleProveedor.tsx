@@ -151,7 +151,7 @@ export function DetalleProveedor({
                 celdas: [
                   <Link
                     key="nombre"
-                    href={`/productos/${producto.id}`}
+                    href={`/admin/productos/${producto.id}`}
                     className="font-medium text-zinc-900 hover:underline"
                   >
                     {producto.nombre}

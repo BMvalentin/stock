@@ -59,7 +59,7 @@ export function FormularioPedido({
 
   useEffect(() => {
     if (estado.exito) {
-      router.push(estado.redirigir ?? "/pedidos");
+      router.push(estado.redirigir ?? "/admin/pedidos");
       router.refresh();
     }
   }, [estado.exito, estado.redirigir, router]);

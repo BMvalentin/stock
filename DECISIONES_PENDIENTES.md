@@ -51,6 +51,7 @@ Estado: `RESUELTA` (ya implementada o acordada), `PENDIENTE` (requiere decisión
 | 44 | ¿El token del QR es de un solo uso? | No. Es compartido por todos los empleados y temporal (45 s, renovado cada 30 s). La no-reutilización se da por expiración; el doble escaneo por empleado se evita con `ultimoFichajeEn` (60 s). |
 | 45 | ¿Cómo se trata una jornada incompleta en la liquidación? | No se paga ni descuenta retraso hasta que el ADMIN la corrija. Solo se liquidan jornadas con todos los tramos configurados cerrados. |
 | 46 | ¿La corrección manual puede alterar una liquidación cerrada? | No. Una asistencia incluida en una liquidación `CALCULADA`, `PAGADA` o `CANCELADA` no se edita sin anular antes la liquidación. |
+| 47 | ¿Cómo se organizan las rutas internas y el acceso por rol? | Todo el panel vive bajo `/admin/*`. El EMPLEADO accede en solo lectura a dashboard, productos, proveedores, stock, pedidos y su propio fichaje; el resto de `/admin/*` es solo ADMIN (route group `(soloAdmin)` + `requerirAdmin`). Se mantienen redirects temporales desde las rutas anteriores. |
 
 ## Pendientes
 

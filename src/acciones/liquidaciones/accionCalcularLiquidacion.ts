@@ -32,9 +32,9 @@ export async function accionCalcularLiquidacion(
       usuario.id,
     );
 
-    revalidatePath("/empleados");
-    revalidatePath(`/empleados/${userId}/liquidacion`);
-    revalidatePath(`/empleados/${userId}/liquidacion/${liquidacionId}`);
+    revalidatePath("/admin/empleados");
+    revalidatePath(`/admin/empleados/${userId}/liquidacion`);
+    revalidatePath(`/admin/empleados/${userId}/liquidacion/${liquidacionId}`);
 
     return { exito: true, mensaje: `Liquidación calculada. Total: $${total}` };
   } catch (error) {

@@ -5,6 +5,7 @@ export async function listarUsuariosActivos(): Promise<OpcionCampo[]> {
   const usuarios = await prisma.user.findMany({
     where: { activo: true },
     orderBy: { name: "asc" },
+    take: 500,
     select: { id: true, name: true, email: true },
   });
 

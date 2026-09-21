@@ -31,7 +31,7 @@ export async function accionActualizarConfiguracionGeneral(
     throw error;
   }
 
-  revalidatePath("/configuracion");
-  revalidatePath("/dashboard");
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/admin");
   return { exito: true, mensaje: "Configuración general actualizada." };
 }

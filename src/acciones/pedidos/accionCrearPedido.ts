@@ -23,11 +23,11 @@ export async function accionCrearPedido(
   try {
     const { id } = await crearPedido(parseo.datos, usuario.id);
 
-    revalidatePath("/pedidos");
-    revalidatePath("/stock");
-    revalidatePath("/movimientos");
-    revalidatePath("/dashboard");
-    return { exito: true, redirigir: `/pedidos/${id}` };
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/stock");
+    revalidatePath("/admin/movimientos");
+    revalidatePath("/admin");
+    return { exito: true, redirigir: `/admin/pedidos/${id}` };
   } catch (error) {
     if (error instanceof ErrorNegocio) return { error: error.message };
     throw error;

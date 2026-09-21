@@ -55,7 +55,7 @@ export function FormularioProducto({
 
   useEffect(() => {
     if (estado.exito) {
-      router.push(estado.redirigir ?? "/productos");
+      router.push(estado.redirigir ?? "/admin/productos");
       router.refresh();
     }
   }, [estado.exito, estado.redirigir, router]);

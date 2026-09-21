@@ -18,6 +18,6 @@ export async function accionCambiarEstadoEmpleado(
     throw error;
   }
 
-  revalidatePath("/empleados");
+  revalidatePath("/admin/empleados");
   return {};
 }

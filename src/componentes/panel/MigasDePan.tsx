@@ -14,7 +14,7 @@ function construirMigas(ruta: string): Miga[] {
   const segmentos = ruta.split("/").filter(Boolean);
 
   if (segmentos.length === 0) {
-    return [{ etiqueta: "Dashboard", href: "/dashboard" }];
+    return [{ etiqueta: "Dashboard", href: "/admin" }];
   }
 
   const migas: Miga[] = [];

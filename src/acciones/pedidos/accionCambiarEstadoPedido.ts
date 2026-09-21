@@ -24,10 +24,10 @@ export async function accionCambiarEstadoPedido(
     throw error;
   }
 
-  revalidatePath("/pedidos");
-  revalidatePath(`/pedidos/${id}`);
-  revalidatePath("/stock");
-  revalidatePath("/movimientos");
-  revalidatePath("/dashboard");
+  revalidatePath("/admin/pedidos");
+  revalidatePath(`/admin/pedidos/${id}`);
+  revalidatePath("/admin/stock");
+  revalidatePath("/admin/movimientos");
+  revalidatePath("/admin");
   return {};
 }

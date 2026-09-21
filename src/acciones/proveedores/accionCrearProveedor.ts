@@ -36,6 +36,6 @@ export async function accionCrearProveedor(
     throw error;
   }
 
-  revalidatePath("/proveedores");
+  revalidatePath("/admin/proveedores");
   return { exito: true, mensaje: "Proveedor creado." };
 }

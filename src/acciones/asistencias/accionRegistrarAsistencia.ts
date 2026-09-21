@@ -32,8 +32,8 @@ export async function accionRegistrarAsistencia(
   try {
     const { userId } = await registrarAsistencia(resultado.data, usuario.id);
 
-    revalidatePath("/empleados");
-    revalidatePath(`/empleados/${userId}/asistencia`);
+    revalidatePath("/admin/empleados");
+    revalidatePath(`/admin/empleados/${userId}/asistencia`);
   } catch (error) {
     if (error instanceof ErrorNegocio) return { error: error.message };
     throw error;

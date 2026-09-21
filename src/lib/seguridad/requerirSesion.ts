@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma/cliente";
@@ -12,7 +13,9 @@ export type UsuarioSesion = {
 
 // Autorización de servidor: valida la sesión y vuelve a leer el usuario desde
 // la base de datos para reflejar cambios de rol o desactivaciones inmediatas.
-export async function requerirSesion(): Promise<UsuarioSesion> {
+// `cache` deduplica la lectura de usuario cuando el layout y la página la
+// invocan en la misma request (una sola consulta por render).
+export const requerirSesion = cache(async (): Promise<UsuarioSesion> => {
   const sesion = await auth();
 
   if (!sesion?.user?.id) {
@@ -34,4 +37,4 @@ export async function requerirSesion(): Promise<UsuarioSesion> {
     email: usuario.email,
     rol: usuario.rol,
   };
-}
+});

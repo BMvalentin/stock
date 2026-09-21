@@ -18,43 +18,42 @@ import {
 export type ItemNavegacion = {
   etiqueta: string;
   ruta: string;
-  soloAdmin: boolean;
   icono: LucideIcon;
 };
 
-// El EMPLEADO solo accede a Dashboard, Productos, Stock, Proveedores, Pedidos
-// y a su propio fichaje de asistencia.
+// El acceso de cada ítem lo decide la política central (`puedeAcceder`), no el
+// propio listado: así la navegación no puede desincronizarse de la autorización.
 export const ITEMS_NAVEGACION: ItemNavegacion[] = [
-  { etiqueta: "Dashboard", ruta: "/dashboard", soloAdmin: false, icono: LayoutDashboard },
-  { etiqueta: "Mi asistencia", ruta: "/asistencia/fichar", soloAdmin: false, icono: Clock },
-  { etiqueta: "Fichaje QR", ruta: "/asistencia/qr", soloAdmin: true, icono: QrCode },
-  { etiqueta: "Productos", ruta: "/productos", soloAdmin: false, icono: Package },
-  { etiqueta: "Categorías", ruta: "/categorias", soloAdmin: true, icono: Tags },
-  { etiqueta: "Proveedores", ruta: "/proveedores", soloAdmin: false, icono: Truck },
-  { etiqueta: "Stock", ruta: "/stock", soloAdmin: false, icono: Boxes },
-  { etiqueta: "Movimientos", ruta: "/movimientos", soloAdmin: true, icono: ArrowLeftRight },
-  { etiqueta: "Pedidos", ruta: "/pedidos", soloAdmin: false, icono: ShoppingCart },
-  { etiqueta: "Reportes", ruta: "/reportes", soloAdmin: true, icono: BarChart3 },
-  { etiqueta: "Empleados", ruta: "/empleados", soloAdmin: true, icono: UserCog },
-  { etiqueta: "Configuración", ruta: "/configuracion", soloAdmin: true, icono: Settings },
-  { etiqueta: "Auditoría", ruta: "/auditoria", soloAdmin: true, icono: ScrollText },
+  { etiqueta: "Dashboard", ruta: "/admin", icono: LayoutDashboard },
+  { etiqueta: "Mi asistencia", ruta: "/admin/asistencia/fichar", icono: Clock },
+  { etiqueta: "Fichaje QR", ruta: "/admin/asistencia/qr", icono: QrCode },
+  { etiqueta: "Productos", ruta: "/admin/productos", icono: Package },
+  { etiqueta: "Categorías", ruta: "/admin/categorias", icono: Tags },
+  { etiqueta: "Proveedores", ruta: "/admin/proveedores", icono: Truck },
+  { etiqueta: "Stock", ruta: "/admin/stock", icono: Boxes },
+  { etiqueta: "Movimientos", ruta: "/admin/movimientos", icono: ArrowLeftRight },
+  { etiqueta: "Pedidos", ruta: "/admin/pedidos", icono: ShoppingCart },
+  { etiqueta: "Reportes", ruta: "/admin/reportes", icono: BarChart3 },
+  { etiqueta: "Empleados", ruta: "/admin/empleados", icono: UserCog },
+  { etiqueta: "Configuración", ruta: "/admin/configuracion", icono: Settings },
+  { etiqueta: "Auditoría", ruta: "/admin/auditoria", icono: ScrollText },
 ];
 
 // Etiquetas legibles para las migas de pan (ruta completa -> texto).
 export const ETIQUETAS_RUTA: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/productos": "Productos",
-  "/categorias": "Categorías",
-  "/proveedores": "Proveedores",
-  "/stock": "Stock",
-  "/movimientos": "Movimientos",
-  "/pedidos": "Pedidos",
-  "/reportes": "Reportes",
-  "/empleados": "Empleados",
-  "/configuracion": "Configuración",
-  "/auditoria": "Auditoría",
-  "/asistencia/fichar": "Mi asistencia",
-  "/asistencia/qr": "Fichaje QR",
+  "/admin": "Dashboard",
+  "/admin/productos": "Productos",
+  "/admin/categorias": "Categorías",
+  "/admin/proveedores": "Proveedores",
+  "/admin/stock": "Stock",
+  "/admin/movimientos": "Movimientos",
+  "/admin/pedidos": "Pedidos",
+  "/admin/reportes": "Reportes",
+  "/admin/empleados": "Empleados",
+  "/admin/configuracion": "Configuración",
+  "/admin/auditoria": "Auditoría",
+  "/admin/asistencia/fichar": "Mi asistencia",
+  "/admin/asistencia/qr": "Fichaje QR",
   nuevo: "Nuevo",
   editar: "Editar",
   asistencia: "Asistencia",

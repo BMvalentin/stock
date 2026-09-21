@@ -18,6 +18,6 @@ export async function accionCambiarEstadoMetodoPago(
     throw error;
   }
 
-  revalidatePath("/configuracion");
+  revalidatePath("/admin/configuracion");
   return {};
 }

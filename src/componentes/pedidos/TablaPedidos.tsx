@@ -40,7 +40,7 @@ export function TablaPedidos({
         celdas: [
           <Link
             key="numero"
-            href={`/pedidos/${pedido.id}`}
+            href={`/admin/pedidos/${pedido.id}`}
             className="text-sm font-medium text-zinc-900 hover:underline"
           >
             #{pedido.numero}

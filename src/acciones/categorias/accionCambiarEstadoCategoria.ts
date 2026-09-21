@@ -18,7 +18,7 @@ export async function accionCambiarEstadoCategoria(
     throw error;
   }
 
-  revalidatePath("/categorias");
-  revalidatePath("/productos");
+  revalidatePath("/admin/categorias");
+  revalidatePath("/admin/productos");
   return {};
 }

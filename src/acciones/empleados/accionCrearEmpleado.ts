@@ -32,6 +32,6 @@ export async function accionCrearEmpleado(
     throw error;
   }
 
-  revalidatePath("/empleados");
+  revalidatePath("/admin/empleados");
   return { exito: true, mensaje: "Empleado creado." };
 }

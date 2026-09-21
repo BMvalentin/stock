@@ -39,7 +39,7 @@ export async function accionCrearCuentaPagoProveedor(
     throw error;
   }
 
-  revalidatePath("/proveedores");
-  revalidatePath(`/proveedores/${proveedorId}`);
+  revalidatePath("/admin/proveedores");
+  revalidatePath(`/admin/proveedores/${proveedorId}`);
   return { exito: true, mensaje: "Cuenta de pago creada." };
 }

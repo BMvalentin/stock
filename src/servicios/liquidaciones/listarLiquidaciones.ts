@@ -17,23 +17,47 @@ export type LiquidacionListado = {
   createdAt: Date;
 };
 
-// Historial de liquidaciones de un empleado, de la más reciente a la más vieja.
+export type FiltrosLiquidaciones = {
+  estado?: EstadoLiquidacion;
+  pagina: number;
+  porPagina: number;
+};
+
+export type ResultadoLiquidaciones = {
+  liquidaciones: LiquidacionListado[];
+  total: number;
+};
+
+// Historial de liquidaciones de un empleado, paginado en la base.
 export async function listarLiquidaciones(
   empleadoId: string,
-): Promise<LiquidacionListado[]> {
-  return prisma.empleadoLiquidacion.findMany({
-    where: { empleadoId },
-    orderBy: [{ desde: "desc" }],
-    select: {
-      id: true,
-      desde: true,
-      hasta: true,
-      tipoRemuneracion: true,
-      total: true,
-      estado: true,
-      calculadaEn: true,
-      pagadaEn: true,
-      createdAt: true,
-    },
-  });
+  filtros: FiltrosLiquidaciones,
+): Promise<ResultadoLiquidaciones> {
+  const where: Prisma.EmpleadoLiquidacionWhereInput = {
+    empleadoId,
+    ...(filtros.estado ? { estado: filtros.estado } : {}),
+  };
+
+  const [total, liquidaciones] = await Promise.all([
+    prisma.empleadoLiquidacion.count({ where }),
+    prisma.empleadoLiquidacion.findMany({
+      where,
+      orderBy: [{ desde: "desc" }],
+      skip: (filtros.pagina - 1) * filtros.porPagina,
+      take: filtros.porPagina,
+      select: {
+        id: true,
+        desde: true,
+        hasta: true,
+        tipoRemuneracion: true,
+        total: true,
+        estado: true,
+        calculadaEn: true,
+        pagadaEn: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+
+  return { liquidaciones, total };
 }

@@ -43,8 +43,8 @@ export async function accionActualizarProduccion(
       usuario.id,
     );
 
-    revalidatePath("/empleados");
-    revalidatePath(`/empleados/${userId}/produccion`);
+    revalidatePath("/admin/empleados");
+    revalidatePath(`/admin/empleados/${userId}/produccion`);
   } catch (error) {
     if (error instanceof ErrorNegocio) return { error: error.message };
     throw error;

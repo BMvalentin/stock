@@ -125,7 +125,7 @@ export function TablaEmpleados({
                     {
                       etiqueta: "Gestionar remuneración",
                       icono: <Wallet className="h-4 w-4" strokeWidth={1.75} />,
-                      href: `/empleados/${empleado.id}`,
+                      href: `/admin/empleados/${empleado.id}`,
                     },
                     {
                       etiqueta: `Cambiar a ${ETIQUETAS_ROL[rolAlternativo]}`,

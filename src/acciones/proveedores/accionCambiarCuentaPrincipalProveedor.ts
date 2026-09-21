@@ -18,7 +18,7 @@ export async function accionCambiarCuentaPrincipalProveedor(
     throw error;
   }
 
-  revalidatePath("/proveedores");
-  revalidatePath(`/proveedores/${proveedorId}`);
+  revalidatePath("/admin/proveedores");
+  revalidatePath(`/admin/proveedores/${proveedorId}`);
   return {};
 }

@@ -50,7 +50,7 @@ export function ResumenProductoBarcode({
 
       <div className="min-w-0 flex-1 space-y-1">
         <Link
-          href={`/productos/${producto.id}`}
+          href={`/admin/productos/${producto.id}`}
           className="block truncate text-sm font-medium text-zinc-900 hover:underline"
         >
           {producto.nombre}
@@ -83,7 +83,7 @@ export function ResumenProductoBarcode({
         ) : null}
 
         <Link
-          href={`/productos/${producto.id}`}
+          href={`/admin/productos/${producto.id}`}
           className="inline-flex items-center gap-1 text-xs font-medium text-zinc-700 transition-colors hover:text-zinc-900"
         >
           <Eye className="h-3.5 w-3.5" strokeWidth={1.75} />

@@ -44,26 +44,29 @@ prisma/
 └── seed.ts
 prisma7.config.ts              # configuración de la CLI de Prisma 7
 src/
+├── proxy.ts                    # gate optimista de sesión para /admin
 ├── app/
-│   ├── (panel)/               # layout protegido + secciones internas
-│   │   ├── layout.tsx         # requerirSesion() + navegación por rol
-│   │   ├── dashboard/page.tsx
-│   │   ├── productos/page.tsx
-│   │   ├── categorias/page.tsx
-│   │   ├── proveedores/page.tsx
-│   │   ├── stock/page.tsx
-│   │   ├── movimientos/page.tsx
-│   │   ├── pedidos/page.tsx
-│   │   ├── pedidos/nuevo/page.tsx
-│   │   ├── pedidos/[id]/page.tsx
-│   │   ├── reportes/page.tsx
-│   │   ├── empleados/page.tsx
-│   │   ├── configuracion/page.tsx
-│   │   └── auditoria/page.tsx
+│   ├── admin/                  # panel interno (layout protegido)
+│   │   ├── layout.tsx          # requerirSesion() + navegación por rol
+│   │   ├── page.tsx            # dashboard (raíz /admin)
+│   │   ├── (soloAdmin)/        # route group: exige requerirAdmin()
+│   │   │   ├── layout.tsx      # gate centralizado de ADMIN
+│   │   │   ├── categorias/
+│   │   │   ├── movimientos/
+│   │   │   ├── reportes/
+│   │   │   ├── empleados/
+│   │   │   ├── configuracion/
+│   │   │   ├── auditoria/
+│   │   │   └── asistencia/qr/
+│   │   ├── productos/          # lectura para ADMIN y EMPLEADO
+│   │   ├── proveedores/
+│   │   ├── stock/
+│   │   ├── pedidos/
+│   │   └── asistencia/fichar/
 │   ├── api/auth/[...nextauth]/route.ts
 │   ├── login/page.tsx
 │   ├── layout.tsx
-│   └── page.tsx               # redirige a /dashboard
+│   └── page.tsx               # redirige a /admin
 ├── acciones/
 │   └── autenticacion/
 ├── componentes/
@@ -94,19 +97,44 @@ src/
 
 ## Protección de rutas
 
-- `src/app/(panel)/layout.tsx` llama a `requerirSesion()`: ninguna página interna
+- `src/proxy.ts` es un gate optimista: sin cookie de sesión, redirige `/admin/*`
+  al login. No es la frontera de seguridad.
+- `src/app/admin/layout.tsx` llama a `requerirSesion()`: ninguna página interna
   se renderiza sin sesión válida.
-- Las secciones administrativas llaman además a `requerirAdmin()`.
+- `src/app/admin/(soloAdmin)/layout.tsx` llama a `requerirAdmin()` y centraliza
+  la autorización del área exclusivamente administrativa.
+- La política de acceso por prefijo vive en `src/constantes/acceso.ts` y se
+  evalúa con `nivelRequeridoParaRuta` / `puedeAcceder`.
+- Las Server Actions administrativas siguen llamando a `requerirAdmin()`
+  (defensa en profundidad). `requerirSesion()` está envuelto en `cache()` para
+  deduplicar la lectura del usuario dentro de una misma request.
 - La navegación filtra los ítems por rol, pero eso es solo cosmético: la
   autorización real ocurre en el servidor.
 
 ## Decisiones de Next.js 16 relevantes
 
-- La convención `middleware` fue renombrada a `proxy`; no se usa proxy para
-  autenticación (se protege en cada layout/Server Action).
+- La convención `middleware` fue renombrada a `proxy`. Se usa `proxy.ts` como
+  gate optimista de sesión; la autorización real se valida en el servidor
+  (layouts y Server Actions).
 - `cookies()`, `headers()`, `params` y `searchParams` son asíncronos.
 - Turbopack es el bundler por defecto en `dev` y `build`.
 - El tipado de rutas se genera con `npx next typegen`.
+
+## Paginación, filtros e índices
+
+- Paginación real en base (`skip`/`take` + `count`) en todos los listados que
+  pueden crecer: productos, stock, movimientos, pedidos, auditoría, empleados,
+  categorías, proveedores, asistencias, producciones y liquidaciones.
+- Parámetros de listado validados con Zod (`src/lib/validaciones/paginacion.ts`):
+  `pagina >= 1` y `porPagina` limitado a `10 | 25 | 50` (máximo 100).
+- El componente `src/componentes/ui/Paginacion.tsx` ofrece primera/anterior,
+  números, siguiente/última, total de registros y selector de tamaño de página.
+- Ordenamiento por whitelist en cada servicio (nunca se pasa un campo crudo del
+  usuario a Prisma).
+- Búsqueda de productos: `startsWith` en `sku`/`barcode` (usa índice único) y
+  `contains` en `nombre`.
+- Índices compuestos de filtro+orden en `prisma/migrations/0007_indices_performance`
+  (migración no destructiva). Se verifican con `SHOW INDEX FROM` en TiDB.
 
 ## Variables de entorno
 
@@ -130,9 +158,10 @@ proveedor de Google no se registra y el botón no se muestra.
   `Prisma.Decimal`.
 - Snapshots: `EmpleadoProduccion.precioUnidad/total` y
   `EmpleadoLiquidacion.total/detalle` congelan los valores históricos.
-- Rutas: `/empleados/[id]` (remuneración y tarifas), `/empleados/[id]/asistencia`,
-  `/empleados/[id]/produccion` y `/empleados/[id]/liquidacion` (con detalle por
-  liquidación). Todas exigen `requerirAdmin()`.
+- Rutas: `/admin/empleados/[id]` (remuneración y tarifas),
+  `/admin/empleados/[id]/asistencia`, `/admin/empleados/[id]/produccion` y
+  `/admin/empleados/[id]/liquidacion` (con detalle por liquidación). Todas
+  exigen `requerirAdmin()`.
 
 ## Fichaje por QR y jornada partida
 
@@ -141,8 +170,9 @@ proveedor de Google no se registra y el botón no se muestra.
   retrasos totales y por tramo. `minutosTrabajados`/`minutosRetraso` son los
   totales del día (snapshot histórico).
 - `TokenFichajeQR` guarda solo el hash de un token temporal (45 s). La pantalla
-  `/asistencia/qr` (ADMIN) lo genera y renueva; el teléfono lo escanea desde
-  `/asistencia/fichar` (cualquier usuario autenticado) con `EscanerQR`.
+  `/admin/asistencia/qr` (ADMIN) lo genera y renueva; el teléfono lo escanea
+  desde `/admin/asistencia/fichar` (cualquier usuario autenticado) con
+  `EscanerQR`.
 - La identidad del empleado surge de la sesión (`usuario → empleado`); el QR no
   contiene el id. La secuencia de fichaje la decide el servidor en una
   transacción (`registrarFichajeQR`), con idempotencia por `ultimoFichajeEn`.
@@ -156,8 +186,8 @@ proveedor de Google no se registra y el botón no se muestra.
 
 ## Módulo de pedidos
 
-- Los pedidos se crean desde `/pedidos/nuevo` (solo ADMIN) y se administran en
-  `/pedidos` y `/pedidos/[id]`.
+- Los pedidos se crean desde `/admin/pedidos/nuevo` (solo ADMIN) y se
+  administran en `/admin/pedidos` y `/admin/pedidos/[id]`.
 - La creación se orquesta en `servicios/pedidos/crearPedido`, que reutiliza
   `calcularTotalesPedido` (precios con `Prisma.Decimal`), `validarStockPedido` y
   `calcularCostoEnvio` (sobre `ConfiguracionEnvio`). El cliente nunca fija

@@ -30,6 +30,6 @@ export async function accionActualizarConfiguracionEnvio(
     throw error;
   }
 
-  revalidatePath("/configuracion");
+  revalidatePath("/admin/configuracion");
   return { exito: true, mensaje: "Configuración de envío actualizada." };
 }

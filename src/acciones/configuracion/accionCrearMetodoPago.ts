@@ -31,7 +31,7 @@ export async function accionCrearMetodoPago(
     throw error;
   }
 
-  revalidatePath("/configuracion");
-  revalidatePath("/productos");
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/admin/productos");
   return { exito: true, mensaje: "Método de pago creado." };
 }

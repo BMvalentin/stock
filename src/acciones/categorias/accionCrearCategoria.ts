@@ -30,7 +30,7 @@ export async function accionCrearCategoria(
     throw error;
   }
 
-  revalidatePath("/categorias");
-  revalidatePath("/productos");
+  revalidatePath("/admin/categorias");
+  revalidatePath("/admin/productos");
   return { exito: true, mensaje: "Categoría creada." };
 }

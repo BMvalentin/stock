@@ -92,7 +92,7 @@ export function TablaLiquidaciones({
                   {
                     etiqueta: "Ver detalle",
                     icono: <Eye className="h-4 w-4" strokeWidth={1.75} />,
-                    href: `/empleados/${userId}/liquidacion/${liquidacion.id}`,
+                    href: `/admin/empleados/${userId}/liquidacion/${liquidacion.id}`,
                   },
                   ...(liquidacion.estado === "CALCULADA"
                     ? [

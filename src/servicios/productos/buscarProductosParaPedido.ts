@@ -29,8 +29,8 @@ export async function buscarProductosParaPedido(
       activo: true,
       OR: [
         { nombre: { contains: termino } },
-        { sku: { contains: termino } },
-        { barcode: { contains: termino } },
+        { sku: { startsWith: termino } },
+        { barcode: { startsWith: termino } },
       ],
     },
     orderBy: { nombre: "asc" },

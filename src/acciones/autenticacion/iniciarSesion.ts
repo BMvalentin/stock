@@ -24,7 +24,7 @@ export async function iniciarSesion(
     await signIn("credentials", {
       email: resultado.data.email.trim().toLowerCase(),
       contrasena: resultado.data.contrasena,
-      redirectTo: "/dashboard",
+      redirectTo: "/admin",
     });
     return {};
   } catch (error) {

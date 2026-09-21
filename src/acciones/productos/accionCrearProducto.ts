@@ -32,10 +32,10 @@ export async function accionCrearProducto(
       usuario.id,
     );
 
-    revalidatePath("/productos");
-    revalidatePath("/stock");
-    revalidatePath("/dashboard");
-    return { exito: true, redirigir: `/productos/${id}` };
+    revalidatePath("/admin/productos");
+    revalidatePath("/admin/stock");
+    revalidatePath("/admin");
+    return { exito: true, redirigir: `/admin/productos/${id}` };
   } catch (error) {
     // Si la creación falla después de subir, se elimina el recurso recién
     // subido para no dejar imágenes huérfanas.

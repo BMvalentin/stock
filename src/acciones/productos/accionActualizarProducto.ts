@@ -56,10 +56,10 @@ export async function accionActualizarProducto(
       await eliminarRecursoImagen(publicIdAnterior);
     }
 
-    revalidatePath("/productos");
-    revalidatePath(`/productos/${id}`);
-    revalidatePath("/dashboard");
-    return { exito: true, redirigir: `/productos/${id}` };
+    revalidatePath("/admin/productos");
+    revalidatePath(`/admin/productos/${id}`);
+    revalidatePath("/admin");
+    return { exito: true, redirigir: `/admin/productos/${id}` };
   } catch (error) {
     // Si la actualización falla antes del commit, se elimina la imagen nueva
     // para no dejar un recurso huérfano.

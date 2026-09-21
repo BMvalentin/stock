@@ -5,6 +5,7 @@ export async function listarCategoriasActivas(): Promise<OpcionCampo[]> {
   const categorias = await prisma.categoria.findMany({
     where: { activo: true },
     orderBy: { nombre: "asc" },
+    take: 500,
     select: { id: true, nombre: true },
   });
 

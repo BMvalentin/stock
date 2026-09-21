@@ -40,8 +40,8 @@ export async function accionActualizarAsistencia(
       usuario.id,
     );
 
-    revalidatePath("/empleados");
-    revalidatePath(`/empleados/${userId}/asistencia`);
+    revalidatePath("/admin/empleados");
+    revalidatePath(`/admin/empleados/${userId}/asistencia`);
   } catch (error) {
     if (error instanceof ErrorNegocio) return { error: error.message };
     throw error;

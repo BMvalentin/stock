@@ -18,7 +18,7 @@ export async function accionCambiarEstadoProducto(
     throw error;
   }
 
-  revalidatePath("/productos");
-  revalidatePath(`/productos/${id}`);
+  revalidatePath("/admin/productos");
+  revalidatePath(`/admin/productos/${id}`);
   return {};
 }

@@ -5,6 +5,7 @@ export async function listarProveedoresActivos(): Promise<OpcionCampo[]> {
   const proveedores = await prisma.proveedor.findMany({
     where: { activo: true },
     orderBy: { nombre: "asc" },
+    take: 500,
     select: { id: true, nombre: true },
   });
 

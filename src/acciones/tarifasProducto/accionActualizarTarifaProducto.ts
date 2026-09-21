@@ -35,8 +35,8 @@ export async function accionActualizarTarifaProducto(
       usuario.id,
     );
 
-    revalidatePath("/empleados");
-    revalidatePath(`/empleados/${userId}`);
+    revalidatePath("/admin/empleados");
+    revalidatePath(`/admin/empleados/${userId}`);
   } catch (error) {
     if (error instanceof ErrorNegocio) return { error: error.message };
     throw error;

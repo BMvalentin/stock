@@ -27,7 +27,7 @@ export function EnlacesEmpleado({
       {ITEMS.map((item) => (
         <Link
           key={item.clave}
-          href={`/empleados/${userId}${item.sufijo}`}
+          href={`/admin/empleados/${userId}${item.sufijo}`}
           className={cn(
             "-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
             item.clave === actual

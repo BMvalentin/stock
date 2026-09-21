@@ -32,9 +32,9 @@ export async function accionRegistrarMovimiento(
     throw error;
   }
 
-  revalidatePath("/stock");
-  revalidatePath("/movimientos");
-  revalidatePath("/dashboard");
-  revalidatePath(`/productos/${resultado.data.productoId}`);
+  revalidatePath("/admin/stock");
+  revalidatePath("/admin/movimientos");
+  revalidatePath("/admin");
+  revalidatePath(`/admin/productos/${resultado.data.productoId}`);
   return { exito: true, mensaje: "Movimiento registrado." };
 }

@@ -85,7 +85,7 @@ export function BuscadorStock({
               {esAdmin ? (
                 <EnlaceBoton
                   variante="primario"
-                  href={`/productos/nuevo?barcode=${encodeURIComponent(
+                  href={`/admin/productos/nuevo?barcode=${encodeURIComponent(
                     resultado.codigo,
                   )}`}
                 >
@@ -108,7 +108,7 @@ export function BuscadorStock({
               {esAdmin ? (
                 <EnlaceBoton
                   variante="primario"
-                  href={`/stock?producto=${resultado.producto.id}`}
+                  href={`/admin/stock?producto=${resultado.producto.id}`}
                 >
                   Registrar movimiento
                 </EnlaceBoton>

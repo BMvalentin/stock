@@ -18,7 +18,7 @@ export async function accionCambiarEstadoProveedor(
     throw error;
   }
 
-  revalidatePath("/proveedores");
-  revalidatePath(`/proveedores/${id}`);
+  revalidatePath("/admin/proveedores");
+  revalidatePath(`/admin/proveedores/${id}`);
   return {};
 }

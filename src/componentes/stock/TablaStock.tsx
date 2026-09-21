@@ -57,7 +57,7 @@ export function TablaStock({
           celdas: [
             <div key="producto" className="min-w-0">
               <Link
-                href={`/productos/${producto.id}`}
+                href={`/admin/productos/${producto.id}`}
                 className="truncate text-sm font-medium text-zinc-900 hover:underline"
               >
                 {producto.nombre}

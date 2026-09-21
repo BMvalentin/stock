@@ -100,7 +100,7 @@ export function TablaProductos({
               ),
               <div key="producto" className="min-w-0">
                 <Link
-                  href={`/productos/${producto.id}`}
+                  href={`/admin/productos/${producto.id}`}
                   className="truncate text-sm font-medium text-zinc-900 hover:underline"
                 >
                   {producto.nombre}
@@ -145,7 +145,7 @@ export function TablaProductos({
                     {
                       etiqueta: "Ver detalle",
                       icono: <Eye className="h-4 w-4" strokeWidth={1.75} />,
-                      href: `/productos/${producto.id}`,
+                      href: `/admin/productos/${producto.id}`,
                     },
                     ...(esAdmin
                       ? [
@@ -154,7 +154,7 @@ export function TablaProductos({
                             icono: (
                               <Pencil className="h-4 w-4" strokeWidth={1.75} />
                             ),
-                            href: `/productos/${producto.id}/editar`,
+                            href: `/admin/productos/${producto.id}/editar`,
                           },
                           {
                             etiqueta: producto.activo

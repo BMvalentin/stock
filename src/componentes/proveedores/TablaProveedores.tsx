@@ -152,7 +152,7 @@ export function TablaProveedores({
                     {
                       etiqueta: "Ver detalle",
                       icono: <Eye className="h-4 w-4" strokeWidth={1.75} />,
-                      href: `/proveedores/${proveedor.id}`,
+                      href: `/admin/proveedores/${proveedor.id}`,
                     },
                     ...(esAdmin
                       ? [
