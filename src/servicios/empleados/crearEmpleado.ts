@@ -37,6 +37,7 @@ export async function crearEmpleado(
         passwordHash,
         rol: datos.rol,
         activo: true,
+        empleado: { create: {} },
       },
     });
 

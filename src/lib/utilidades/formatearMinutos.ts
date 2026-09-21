@@ -1,0 +1,10 @@
+// Formatea una cantidad de minutos como duración legible: "45m", "1h 15m".
+export function formatearMinutos(minutos: number): string {
+  const total = Math.max(0, Math.round(minutos));
+  const horas = Math.floor(total / 60);
+  const resto = total % 60;
+
+  if (horas === 0) return `${resto}m`;
+  if (resto === 0) return `${horas}h`;
+  return `${horas}h ${resto}m`;
+}

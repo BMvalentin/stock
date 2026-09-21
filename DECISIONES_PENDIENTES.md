@@ -35,6 +35,22 @@ Estado: `RESUELTA` (ya implementada o acordada), `PENDIENTE` (requiere decisión
 | 26 | ¿Cuándo se descuenta el stock de un pedido? | Se valida al crear y se descuenta al pasar a `CONFIRMADO` (regla existente, con banderas de idempotencia). |
 | 27 | ¿Cómo se determina el precio de un pedido? | Método de pago obligatorio; el precio sale de `PrecioProducto` (producto + método) y se congela en `DetallePedido.precioUnitario`. |
 | 28 | ¿Cómo se guarda la ubicación de entrega? | `Pedido.mapsUrl` (URL de Google Maps validada) y `latitud`/`longitud` opcionales, con snapshot de dirección, localidad y referencia. Sin URL se genera una búsqueda con dirección + localidad. |
+| 29 | ¿El empleado es una entidad separada de `User`? | Sí: `Empleado` 1:1 con `User` (`userId @unique`). Aísla los datos salariales; la baja lógica sigue en `User.activo` (fuente única). |
+| 30 | ¿Se pueden combinar modalidades de pago? | No. `TipoRemuneracion` es excluyente (`POR_HORA`/`POR_PRODUCCION`). Combinarlas requiere un modelado explícito futuro. |
+| 31 | ¿Se persiste el valor hora? | No. Se calcula `pagoJornada / (horasJornada * 60)` en `calcularRemuneracionPorHora`; solo es informativo. |
+| 32 | ¿Cómo se representan fecha y hora de asistencia? | `fecha` como `@db.Date` y horas como texto `"HH:mm"`. El cálculo de minutos es aritmética simple y no depende de la zona horaria del servidor. |
+| 33 | ¿La salida anticipada genera descuento? | Sí, proporcional por minuto no trabajado, simétrico al retraso y con tope en la jornada completa. |
+| 34 | ¿El retraso se redondea? | No. Se descuenta proporcionalmente por minuto (45 min no equivalen a 1 h). |
+| 35 | ¿La liquidación se recalcula? | No. Al calcular se congela `total` y `detalle` (JSON) y se vincula cada asistencia/producción incluida para evitar doble pago. |
+| 36 | ¿Registrar producción modifica el stock? | No. `EmpleadoProduccion` registra solo la cantidad producida por el empleado. El ingreso de stock, si se quisiera, se haría por el módulo de stock. |
+| 37 | ¿El precio de producción reutiliza `PrecioProducto`? | No. Es una tarifa propia (`EmpleadoTarifaProducto`) por empleado y producto; dos empleados pueden tener tarifas distintas para el mismo producto. |
+| 38 | ¿La producción guarda el precio histórico? | Sí. Cada `EmpleadoProduccion` congela `precioUnidad` y `total`; cambiar la tarifa no altera registros anteriores. |
+| 39 | ¿Una tarifa de producción se elimina? | No. Baja lógica (`activo = false`), se conserva para historial y puede reactivarse. |
+| 42 | ¿Cómo se modela la jornada partida? | Columnas planas en `EmpleadoAsistencia`: `horaEntrada`/`horaSalida` (tramo 1) y `horaEntradaTramo2`/`horaSalidaTramo2` (tramo 2). Una única asistencia diaria con hasta dos tramos. |
+| 43 | ¿Cómo se identifica al empleado que ficha por QR? | Desde la sesión autenticada (usuario → empleado). El QR solo contiene un token temporal; nunca el id del empleado. |
+| 44 | ¿El token del QR es de un solo uso? | No. Es compartido por todos los empleados y temporal (45 s, renovado cada 30 s). La no-reutilización se da por expiración; el doble escaneo por empleado se evita con `ultimoFichajeEn` (60 s). |
+| 45 | ¿Cómo se trata una jornada incompleta en la liquidación? | No se paga ni descuenta retraso hasta que el ADMIN la corrija. Solo se liquidan jornadas con todos los tramos configurados cerrados. |
+| 46 | ¿La corrección manual puede alterar una liquidación cerrada? | No. Una asistencia incluida en una liquidación `CALCULADA`, `PAGADA` o `CANCELADA` no se edita sin anular antes la liquidación. |
 
 ## Pendientes
 
@@ -52,3 +68,5 @@ Estado: `RESUELTA` (ya implementada o acordada), `PENDIENTE` (requiere decisión
 | — | ¿Devoluciones parciales de pedidos? | v1: cancelación completa del pedido. | Medio |
 | — | ¿Notificaciones (email/WhatsApp) automáticas al cliente? | Fuera de alcance en v1. | Bajo |
 | — | ¿Roles adicionales? | Solo ADMIN y EMPLEADO. Cualquier otro requiere justificación. | Alto |
+| 40 | ¿Se implementan horas extra? | No por ahora. La estructura (minutos y valor minuto) permite agregarlas luego; trabajar de más no paga más automáticamente. | Bajo |
+| 41 | ¿Una ausencia justificada se paga? | Hoy no genera pago (igual que la ausente). Definir si corresponde un pago parcial. | Medio |

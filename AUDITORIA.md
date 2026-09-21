@@ -105,6 +105,36 @@ durante una auditoría salvo que la fase lo solicite.
 - La metadata de auditoría guarda CBU/CVU **enmascarados**; nunca completos.
 - Los datos de pago solo se consultan y muestran para `ADMIN`.
 
+### Módulo de remuneración de empleados
+
+- Migración `0005_remuneracion_empleados` (no destructiva): crea `Empleado`
+  (1:1 con `User`), `EmpleadoAsistencia`, `EmpleadoTarifaProducto`,
+  `EmpleadoProduccion` y `EmpleadoLiquidacion`, y backfillea un perfil por cada
+  `User` existente. No elimina ni modifica datos previos.
+- Modalidades excluyentes `POR_HORA`/`POR_PRODUCCION`; cálculo por minuto con
+  `Prisma.Decimal`; snapshot de tarifas y liquidaciones.
+- Acciones de auditoría: `EMPLEADO_REMUNERACION_ACTUALIZADA`,
+  `TARIFA_PRODUCCION_*`, `PRODUCCION_*`, `ASISTENCIA_*`, `LIQUIDACION_*`.
+- Solo `ADMIN` accede; los datos salariales no se exponen en listados públicos.
+
+### Fichaje por QR y jornada partida
+
+- Migración `0006_asistencia_jornada_partida_qr` (no destructiva): agrega
+  `horaEntradaTramo2Esperada`/`horaSalidaTramo2Esperada` a `Empleado`;
+  `horaEntradaTramo2`, `horaSalidaTramo2`, `minutosRetrasoTramo1`,
+  `minutosRetrasoTramo2`, `origen` y `ultimoFichajeEn` a `EmpleadoAsistencia`;
+  y crea `TokenFichajeQR` (solo hash). Backfill de `minutosRetrasoTramo1`.
+- Nota de TiDB: `ALTER TABLE` con `ADD COLUMN` e `ADD INDEX` de esa misma
+  columna en una sola sentencia falla (error 1072). Se separó en dos sentencias.
+- Reconciliación de migraciones: `0003`–`0005` estaban aplicadas en TiDB pero no
+  registradas en `_prisma_migrations`; se marcaron con `migrate resolve
+  --applied` (solo metadata) antes de aplicar `0006` con `migrate deploy`.
+- Rutas nuevas: `/asistencia/qr` (ADMIN) y `/asistencia/fichar` (autenticado).
+  Auditoría `ASISTENCIA_FICHAJE_QR`; el origen (`QR`/`MANUAL_ADMIN`) se guarda
+  en los datos de auditoría.
+- Verificación: 18 pruebas unitarias (`npm test`) y una prueba de integración
+  contra TiDB (casos 1, 5, 6, 7, 8, 9, 10, 11 y 12) con limpieza posterior.
+
 ### Módulo de pedidos
 
 - Migración `0004_pedidos_unidad_venta_y_entrega` (no destructiva):

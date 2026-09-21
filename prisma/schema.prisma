@@ -39,6 +39,8 @@ model User {
   pagos            Pago[]
   auditorias       Auditoria[]
   historialPrecios PrecioProductoHistorial[]
+  empleado         Empleado?
+  tokensFichaje    TokenFichajeQR[]
 
   @@index([rol])
   @@index([activo])
@@ -139,6 +141,8 @@ model Producto {
   movimientos      MovimientoStock[]
   proveedores      ProductoProveedor[]
   detalles         DetallePedido[]
+  tarifasEmpleado  EmpleadoTarifaProducto[]
+  producciones     EmpleadoProduccion[]
 
   @@index([categoriaId])
   @@index([nombre])
@@ -485,4 +489,193 @@ model Auditoria {
   @@index([entidad, entidadId])
   @@index([usuarioId])
   @@index([accion])
+}
+
+// ============================================================
+// Remuneración de empleados
+// ============================================================
+
+// Modalidad de remuneración. Es excluyente: un empleado se paga por hora o por
+// producción, nunca por ambas. Si en el futuro se necesita combinar, debe
+// modelarse explícitamente.
+enum TipoRemuneracion {
+  POR_HORA
+  POR_PRODUCCION
+}
+
+// Estado de la jornada registrada. La ausencia no genera pago de jornada.
+enum EstadoAsistencia {
+  PRESENTE
+  AUSENTE
+  JUSTIFICADO
+}
+
+// Origen del registro de asistencia. `QR` identifica el fichaje automático
+// desde el teléfono; `MANUAL_ADMIN` la carga o corrección de un administrador.
+enum OrigenAsistencia {
+  QR
+  MANUAL_ADMIN
+}
+
+// Estados de la liquidación. ABIERTA permite correcciones; CALCULADA congela
+// los valores; PAGADA y CANCELADA son terminales.
+enum EstadoLiquidacion {
+  ABIERTA
+  CALCULADA
+  PAGADA
+  CANCELADA
+}
+
+// Perfil laboral asociado 1:1 a un User. No duplica el sistema de usuarios:
+// la baja lógica sigue siendo `User.activo`. Separa los datos de remuneración
+// (sensibles) de la tabla de autenticación.
+model Empleado {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  tipoRemuneracion    TipoRemuneracion @default(POR_HORA)
+  // Configuración de jornada para la modalidad POR_HORA. El tramo 1 usa
+  // `horaEntradaEsperada`/`horaSalidaEsperada`. El tramo 2 es opcional: se deja
+  // en null para la jornada continua y se completa en la jornada partida.
+  horasJornada               Decimal  @default(8) @db.Decimal(5, 2)
+  pagoJornada                Decimal  @default(0) @db.Decimal(12, 2)
+  horaEntradaEsperada        String   @default("08:00")
+  horaSalidaEsperada         String   @default("16:00")
+  horaEntradaTramo2Esperada  String?
+  horaSalidaTramo2Esperada   String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asistencias   EmpleadoAsistencia[]
+  producciones  EmpleadoProduccion[]
+  tarifas       EmpleadoTarifaProducto[]
+  liquidaciones EmpleadoLiquidacion[]
+
+  @@index([tipoRemuneracion])
+}
+
+// Jornada registrada de un empleado por hora. `fecha` es date-only y las horas
+// son texto "HH:mm": el cálculo de minutos no depende de la zona horaria del
+// servidor. Soporta jornada continua (solo tramo 1) o partida (tramo 1 y 2):
+// `horaEntrada`/`horaSalida` son el tramo 1 y `horaEntradaTramo2`/
+// `horaSalidaTramo2` el tramo 2. `minutosTrabajados` y `minutosRetraso` son los
+// totales del día y se congelan al calcular; los retrasos por tramo se guardan
+// para conservarlos en el histórico.
+model EmpleadoAsistencia {
+  id                    String            @id @default(cuid())
+  empleadoId            String
+  fecha                 DateTime          @db.Date
+  horaEntrada           String?
+  horaSalida            String?
+  horaEntradaTramo2     String?
+  horaSalidaTramo2      String?
+  minutosTrabajados     Int?
+  minutosRetraso        Int?
+  minutosRetrasoTramo1  Int?
+  minutosRetrasoTramo2  Int?
+  estado                EstadoAsistencia  @default(PRESENTE)
+  origen                OrigenAsistencia  @default(MANUAL_ADMIN)
+  // Instante del último fichaje. Se usa para evitar duplicar un doble escaneo
+  // accidental en una ventana corta de tiempo.
+  ultimoFichajeEn       DateTime?
+  observacion           String?
+  liquidacionId         String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  empleado    Empleado             @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  liquidacion EmpleadoLiquidacion? @relation(fields: [liquidacionId], references: [id], onDelete: SetNull)
+
+  @@unique([empleadoId, fecha])
+  @@index([empleadoId, fecha])
+  @@index([liquidacionId])
+  @@index([ultimoFichajeEn])
+}
+
+// Tarifa que se paga a un empleado por unidad producida de un producto. Es
+// independiente del precio de venta (`PrecioProducto`). Una fila por
+// empleado+producto; la baja es lógica (`activo = false`) para conservar el
+// historial y permitir reactivar.
+model EmpleadoTarifaProducto {
+  id           String   @id @default(cuid())
+  empleadoId   String
+  productoId   String
+  precioUnidad Decimal  @db.Decimal(12, 2)
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  empleado Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@unique([empleadoId, productoId])
+  @@index([empleadoId, productoId])
+  @@index([productoId])
+}
+
+// Producción registrada de un empleado por producción. Guarda snapshot del
+// precio unitario y del total: cambiar la tarifa no altera registros pasados.
+// No modifica el stock del producto.
+model EmpleadoProduccion {
+  id            String   @id @default(cuid())
+  empleadoId    String
+  productoId    String
+  fecha         DateTime @db.Date
+  cantidad      Int
+  precioUnidad  Decimal  @db.Decimal(12, 2)
+  total         Decimal  @db.Decimal(12, 2)
+  liquidacionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  empleado    Empleado             @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  producto    Producto             @relation(fields: [productoId], references: [id])
+  liquidacion EmpleadoLiquidacion? @relation(fields: [liquidacionId], references: [id], onDelete: SetNull)
+
+  @@index([empleadoId, fecha])
+  @@index([productoId])
+  @@index([liquidacionId])
+}
+
+// Liquidación de un período. Al calcularse se congela el total y el detalle
+// (JSON) y se vinculan las asistencias/producciones incluidas para evitar
+// doble pago. Una liquidación cerrada nunca se recalcula.
+model EmpleadoLiquidacion {
+  id               String            @id @default(cuid())
+  empleadoId       String
+  desde            DateTime          @db.Date
+  hasta            DateTime          @db.Date
+  tipoRemuneracion TipoRemuneracion
+  total            Decimal           @db.Decimal(12, 2)
+  estado           EstadoLiquidacion @default(ABIERTA)
+  detalle          Json?
+  calculadaEn      DateTime?
+  pagadaEn         DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  empleado     Empleado              @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  asistencias  EmpleadoAsistencia[]
+  producciones EmpleadoProduccion[]
+
+  @@unique([empleadoId, desde, hasta])
+  @@index([empleadoId, desde])
+  @@index([estado])
+}
+
+// Token temporal que habilita el fichaje por QR. La pantalla del comercio lo
+// genera y renueva; el teléfono lo escanea y el servidor lo valida. Nunca se
+// guarda el token en claro: solo su hash. Es compartido por todos los empleados
+// mientras esté vigente; la identidad surge de la sesión autenticada.
+model TokenFichajeQR {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  expiraEn    DateTime
+  creadoPorId String?
+  createdAt   DateTime @default(now())
+
+  creadoPor User? @relation(fields: [creadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([expiraEn])
+  @@index([creadoPorId])
 }

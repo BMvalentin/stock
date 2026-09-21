@@ -114,6 +114,46 @@ Ver `.env.example`. `DATABASE_URL` y `AUTH_SECRET` son obligatorias.
 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` son opcionales: si faltan, el
 proveedor de Google no se registra y el botón no se muestra.
 
+## Módulo de remuneración de empleados
+
+- `Empleado` es un perfil 1:1 con `User` (`userId @unique`). Separa los datos
+  salariales de la autenticación; la baja lógica sigue siendo `User.activo`.
+- Entidades: `Empleado`, `EmpleadoAsistencia`, `EmpleadoTarifaProducto`,
+  `EmpleadoProduccion` y `EmpleadoLiquidacion` (migración
+  `0005_remuneracion_empleados`, no destructiva, con backfill de perfiles).
+- Fechas de calendario en `@db.Date` y horas como texto `"HH:mm"`: los cálculos
+  de minutos no dependen de la zona horaria del servidor. La zona del comercio
+  vive en `constantes/zonaHoraria`.
+- Cálculos en servicios puros: `calcularRemuneracionPorHora`,
+  `calcularRemuneracionProduccion` y `calcularLiquidacionEmpleado` (elige la
+  fórmula según `Empleado.tipoRemuneracion`). Dinero siempre con
+  `Prisma.Decimal`.
+- Snapshots: `EmpleadoProduccion.precioUnidad/total` y
+  `EmpleadoLiquidacion.total/detalle` congelan los valores históricos.
+- Rutas: `/empleados/[id]` (remuneración y tarifas), `/empleados/[id]/asistencia`,
+  `/empleados/[id]/produccion` y `/empleados/[id]/liquidacion` (con detalle por
+  liquidación). Todas exigen `requerirAdmin()`.
+
+## Fichaje por QR y jornada partida
+
+- `EmpleadoAsistencia` soporta hasta dos tramos con columnas planas
+  (`horaEntrada`/`horaSalida` y `horaEntradaTramo2`/`horaSalidaTramo2`) y guarda
+  retrasos totales y por tramo. `minutosTrabajados`/`minutosRetraso` son los
+  totales del día (snapshot histórico).
+- `TokenFichajeQR` guarda solo el hash de un token temporal (45 s). La pantalla
+  `/asistencia/qr` (ADMIN) lo genera y renueva; el teléfono lo escanea desde
+  `/asistencia/fichar` (cualquier usuario autenticado) con `EscanerQR`.
+- La identidad del empleado surge de la sesión (`usuario → empleado`); el QR no
+  contiene el id. La secuencia de fichaje la decide el servidor en una
+  transacción (`registrarFichajeQR`), con idempotencia por `ultimoFichajeEn`.
+- Cálculos puros en `determinarProximoFichaje`, `calcularMinutosJornada` y
+  `calcularEstadoJornada`; la liquidación usa `calcularRemuneracionPorHora`
+  (jornada partida y exclusión de jornadas incompletas).
+- Migración `0006_asistencia_jornada_partida_qr` (no destructiva: agrega
+  columnas y la tabla de tokens, con backfill de `minutosRetrasoTramo1`).
+- El escáner de cámara se generalizó en `EscanerCamara`; `EscanerCodigoBarras` y
+  `EscanerQR` lo reutilizan con `@zxing/browser`.
+
 ## Módulo de pedidos
 
 - Los pedidos se crean desde `/pedidos/nuevo` (solo ADMIN) y se administran en

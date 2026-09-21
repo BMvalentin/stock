@@ -181,6 +181,61 @@ Estados: `PENDIENTE`, `AVISADO`, `CONFIRMADO`, `RECHAZADO`.
 - Se muestran únicamente como parte del pedido; no hay historial ni perfil de
   clientes.
 
+## Remuneración de empleados
+
+- Cada `User` tiene un perfil laboral `Empleado` 1:1. La baja lógica sigue
+  siendo `User.activo`; no hay un segundo sistema de usuarios.
+- `TipoRemuneracion` es excluyente: `POR_HORA` o `POR_PRODUCCION`. No se
+  mezclan las fórmulas. Combinar ambas requiere un modelado explícito futuro.
+- **Por hora:** se configuran `horasJornada`, `pagoJornada`,
+  `horaEntradaEsperada` y `horaSalidaEsperada` (tramo 1). Opcionalmente
+  `horaEntradaTramo2Esperada` y `horaSalidaTramo2Esperada` (tramo 2): sin ellas
+  la jornada es continua; con ambas, partida. El valor minuto es
+  `pagoJornada / (horasJornada * 60)` y no se persiste.
+- **Asistencia:** `fecha` (`@db.Date`) y horas `"HH:mm"`. Una única asistencia
+  diaria con hasta dos tramos. Se guardan minutos trabajados y de retraso
+  totales y por tramo, calculados en el momento. Estados: `PRESENTE`,
+  `AUSENTE`, `JUSTIFICADO`. Origen: `QR` o `MANUAL_ADMIN`. Una ausencia no
+  genera pago.
+- **Fichaje por QR:** el empleado escanea desde su teléfono un token temporal
+  generado en la pantalla `/asistencia/qr`. La identidad surge de la sesión
+  autenticada; la fecha y la hora las fija el servidor en
+  `America/Argentina/Buenos_Aires`. La secuencia es Entrada 1 → Salida 1 →
+  Entrada 2 → Salida 2. Un quinto fichaje se rechaza; un doble escaneo dentro de
+  60 s no duplica. El ADMIN conserva la carga y corrección manuales.
+- **Cálculo por hora:** el pago de cada jornada es proporcional a los minutos
+  trabajados (`valorMinuto × minutos`), con tope en la jornada completa. El
+  retraso y la salida anticipada se descuentan proporcionalmente por minuto
+  (45 min no se redondean a 1 h). El retraso se calcula por tramo y se suma. Una
+  jornada incompleta no se paga ni descuenta retraso hasta su corrección. No hay
+  horas extra automáticas.
+- **Por producción:** `EmpleadoTarifaProducto` define el precio por unidad de
+  cada empleado y producto. Es independiente de `PrecioProducto` (precio de
+  venta). La tarifa tiene baja lógica (`activo = false`) y puede reactivarse.
+- **Registro de producción:** el precio se toma de la tarifa activa y se
+  congela en `EmpleadoProduccion` (`precioUnidad`, `total`). La cantidad es un
+  entero positivo. Registrar producción **no** modifica el stock.
+- **Liquidación (`EmpleadoLiquidacion`):** representa cuánto corresponde pagar
+  por un período. Estados: `ABIERTA`, `CALCULADA`, `PAGADA`, `CANCELADA`. Al
+  calcular se congela el `total` y el `detalle` (JSON) y se vincula cada
+  asistencia/producción incluida. Una liquidación cerrada no se recalcula;
+  corregirla requiere anularla (lo que libera los registros). No implementa
+  pago bancario.
+- **Cambio de modalidad o tarifa:** no altera registros históricos. Las
+  asistencias, producciones y liquidaciones conservan su modalidad, tarifa e
+  importes.
+- **Seguridad:** los datos de remuneración son sensibles. Solo `ADMIN`
+  configura remuneraciones, tarifas, asistencia, producción y liquidaciones.
+  El `EMPLEADO` puede fichar y consultar su asistencia, pero no modificar
+  asistencia histórica, horarios, remuneración ni liquidaciones. Toda acción
+  valida autenticación, rol y autorización en el servidor.
+- **Auditoría:** `EMPLEADO_REMUNERACION_ACTUALIZADA`,
+  `TARIFA_PRODUCCION_CREADA/EDITADA/ACTIVADA/DESACTIVADA`,
+  `PRODUCCION_REGISTRADA/EDITADA/ANULADA`,
+  `ASISTENCIA_REGISTRADA/EDITADA`, `ASISTENCIA_FICHAJE_QR`,
+  `LIQUIDACION_CALCULADA/PAGADA/CANCELADA`. El origen (`QR` o `MANUAL_ADMIN`)
+  queda registrado en los datos de auditoría.
+
 ## Auditoría
 
 - Las operaciones administrativas importantes crean un registro en `Auditoria`:

@@ -22,6 +22,7 @@ async function sembrarAdministrador(): Promise<void> {
       rol: "ADMIN",
       activo: true,
       passwordHash,
+      empleado: { create: {} },
     },
   });
 

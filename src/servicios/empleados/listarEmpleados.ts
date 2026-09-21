@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma/cliente";
 import type { Prisma } from "@/generated/prisma/client";
-import type { Rol } from "@/generated/prisma/enums";
+import type { Rol, TipoRemuneracion } from "@/generated/prisma/enums";
 
 export type FiltrosEmpleados = {
   busqueda?: string;
@@ -12,6 +12,7 @@ export type EmpleadoListado = {
   email: string;
   rol: Rol;
   activo: boolean;
+  tipoRemuneracion: TipoRemuneracion | null;
   createdAt: Date;
 };
 
@@ -37,6 +38,7 @@ export async function listarEmpleados(
       rol: true,
       activo: true,
       createdAt: true,
+      empleado: { select: { tipoRemuneracion: true } },
     },
   });
 
@@ -46,6 +48,7 @@ export async function listarEmpleados(
     email: empleado.email,
     rol: empleado.rol,
     activo: empleado.activo,
+    tipoRemuneracion: empleado.empleado?.tipoRemuneracion ?? null,
     createdAt: empleado.createdAt,
   }));
 }

@@ -3,8 +3,10 @@ import {
   ArrowLeftRight,
   BarChart3,
   Boxes,
+  Clock,
   LayoutDashboard,
   Package,
+  QrCode,
   ScrollText,
   Settings,
   ShoppingCart,
@@ -20,9 +22,12 @@ export type ItemNavegacion = {
   icono: LucideIcon;
 };
 
-// El EMPLEADO solo accede a Dashboard, Productos, Stock, Proveedores y Pedidos.
+// El EMPLEADO solo accede a Dashboard, Productos, Stock, Proveedores, Pedidos
+// y a su propio fichaje de asistencia.
 export const ITEMS_NAVEGACION: ItemNavegacion[] = [
   { etiqueta: "Dashboard", ruta: "/dashboard", soloAdmin: false, icono: LayoutDashboard },
+  { etiqueta: "Mi asistencia", ruta: "/asistencia/fichar", soloAdmin: false, icono: Clock },
+  { etiqueta: "Fichaje QR", ruta: "/asistencia/qr", soloAdmin: true, icono: QrCode },
   { etiqueta: "Productos", ruta: "/productos", soloAdmin: false, icono: Package },
   { etiqueta: "Categorías", ruta: "/categorias", soloAdmin: true, icono: Tags },
   { etiqueta: "Proveedores", ruta: "/proveedores", soloAdmin: false, icono: Truck },
@@ -48,9 +53,24 @@ export const ETIQUETAS_RUTA: Record<string, string> = {
   "/empleados": "Empleados",
   "/configuracion": "Configuración",
   "/auditoria": "Auditoría",
+  "/asistencia/fichar": "Mi asistencia",
+  "/asistencia/qr": "Fichaje QR",
   nuevo: "Nuevo",
   editar: "Editar",
+  asistencia: "Asistencia",
+  produccion: "Producción",
+  liquidacion: "Liquidaciones",
+  fichar: "Fichar",
+  qr: "QR",
 };
 
 // Palabras reservadas de subrutas que no representan un identificador.
-export const SEGMENTOS_ESPECIALES = ["nuevo", "editar"];
+export const SEGMENTOS_ESPECIALES = [
+  "nuevo",
+  "editar",
+  "asistencia",
+  "produccion",
+  "liquidacion",
+  "fichar",
+  "qr",
+];

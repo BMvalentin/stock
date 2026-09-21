@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, ShieldCheck, UserCog, UserX } from "lucide-react";
+import { Plus, ShieldCheck, UserCog, UserX, Wallet } from "lucide-react";
 import type { EmpleadoListado } from "@/servicios/empleados/listarEmpleados";
 import { accionCambiarRolEmpleado } from "@/acciones/empleados/accionCambiarRolEmpleado";
 import { accionCambiarEstadoEmpleado } from "@/acciones/empleados/accionCambiarEstadoEmpleado";
 import { ETIQUETAS_ROL } from "@/constantes/roles";
+import { ETIQUETAS_TIPO_REMUNERACION } from "@/constantes/tiposRemuneracion";
 import { formatearFecha } from "@/lib/utilidades/formatearFecha";
 import type { Rol } from "@/generated/prisma/enums";
 import { TablaDatos } from "@/componentes/tablas/TablaDatos";
@@ -72,6 +73,7 @@ export function TablaEmpleados({
         columnas={[
           { encabezado: "Empleado" },
           { encabezado: "Rol" },
+          { encabezado: "Remuneración" },
           { encabezado: "Alta" },
           { encabezado: "Estado" },
           { encabezado: "", alineacion: "der" },
@@ -103,6 +105,11 @@ export function TablaEmpleados({
               >
                 {ETIQUETAS_ROL[empleado.rol]}
               </Etiqueta>,
+              <span key="remuneracion" className="text-xs text-zinc-600">
+                {empleado.tipoRemuneracion
+                  ? ETIQUETAS_TIPO_REMUNERACION[empleado.tipoRemuneracion]
+                  : "Sin configurar"}
+              </span>,
               <span key="alta" className="whitespace-nowrap text-xs text-zinc-500">
                 {formatearFecha(empleado.createdAt, locale)}
               </span>,
@@ -115,6 +122,11 @@ export function TablaEmpleados({
               <div key="acciones" className="flex justify-end">
                 <MenuAcciones
                   items={[
+                    {
+                      etiqueta: "Gestionar remuneración",
+                      icono: <Wallet className="h-4 w-4" strokeWidth={1.75} />,
+                      href: `/empleados/${empleado.id}`,
+                    },
                     {
                       etiqueta: `Cambiar a ${ETIQUETAS_ROL[rolAlternativo]}`,
                       icono:
