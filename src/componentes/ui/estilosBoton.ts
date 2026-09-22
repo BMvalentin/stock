@@ -12,8 +12,8 @@ const VARIANTES: Record<VarianteBoton, string> = {
 };
 
 const TAMANOS: Record<TamanoBoton, string> = {
-  sm: "h-8 gap-1.5 px-3 text-xs",
-  md: "h-9 gap-2 px-4 text-sm",
+  sm: "min-h-8 gap-1.5 px-3 text-xs",
+  md: "min-h-9 gap-2 px-4 text-sm",
 };
 
 export function estilosBoton(

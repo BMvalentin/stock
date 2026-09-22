@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utilidades/cn";
 import {
   ETIQUETAS_RUTA,
   SEGMENTOS_ESPECIALES,
@@ -54,9 +55,15 @@ export function MigasDePan() {
           const ultima = indice === migas.length - 1;
 
           return (
-            <li key={miga.href} className="flex min-w-0 items-center gap-1">
+            <li
+              key={miga.href}
+              className={cn(
+                "flex min-w-0 items-center gap-1",
+                !ultima && "hidden sm:flex",
+              )}
+            >
               {indice > 0 ? (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-300" />
+                <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-zinc-300 sm:block" />
               ) : null}
               {ultima ? (
                 <span className="truncate font-medium text-zinc-900">

@@ -31,9 +31,13 @@ export function BotonAbrirMapa({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={estilosBoton("primario")}
+      className={estilosBoton(
+        "primario",
+        "md",
+        "w-full text-center sm:w-auto",
+      )}
     >
-      <MapPin className="h-4 w-4" strokeWidth={1.75} />
+      <MapPin className="h-4 w-4 shrink-0" strokeWidth={1.75} />
       Abrir ubicación en Google Maps
     </a>
   );

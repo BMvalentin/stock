@@ -31,7 +31,7 @@ export function AccionesPago({
     <div className="space-y-3">
       {error ? <Alerta tono="error">{error}</Alerta> : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap [&>button]:w-full sm:[&>button]:w-auto">
         {ESTADOS_PAGO.filter((estado) => estado !== estadoPago).map(
           (estado) => (
             <Boton

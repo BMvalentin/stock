@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { Phone } from "lucide-react";
 import { requerirSesion } from "@/lib/seguridad/requerirSesion";
 import { obtenerPedido } from "@/servicios/pedidos/obtenerPedido";
@@ -13,17 +12,15 @@ import {
   ETIQUETAS_ESTADO_PAGO,
   TONOS_ESTADO_PAGO,
 } from "@/constantes/estadosPago";
-import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
-import { formatearCantidad } from "@/lib/utilidades/formatearCantidad";
-import { formatearFechaHora } from "@/lib/utilidades/formatearFechaHora";
-import { etiquetaModalidadLinea } from "@/lib/utilidades/etiquetaModalidadLinea";
-import { sufijoPrecioModalidadLinea } from "@/lib/utilidades/sufijoPrecioModalidadLinea";
+import { formatearFechaHoraCompacta } from "@/lib/utilidades/formatearFechaHoraCompacta";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { Tarjeta } from "@/componentes/ui/Tarjeta";
 import { Etiqueta } from "@/componentes/ui/Etiqueta";
 import { Dato } from "@/componentes/ui/Dato";
-import { TablaDatos } from "@/componentes/tablas/TablaDatos";
+import { ProductosPedido } from "@/componentes/pedidos/ProductosPedido";
+import { PagosPedido } from "@/componentes/pedidos/PagosPedido";
+import { TotalesPedido } from "@/componentes/pedidos/TotalesPedido";
 import { AccionesEstadoPedido } from "@/componentes/pedidos/AccionesEstadoPedido";
 import { AccionesPago } from "@/componentes/pedidos/AccionesPago";
 import { BotonAbrirMapa } from "@/componentes/pedidos/BotonAbrirMapa";
@@ -51,7 +48,7 @@ export default async function PaginaDetallePedido({
     <div className="space-y-6">
       <EncabezadoPagina
         titulo={`Pedido #${pedido.numero}`}
-        descripcion={formatearFechaHora(pedido.createdAt, locale)}
+        descripcion={formatearFechaHoraCompacta(pedido.createdAt, locale)}
         acciones={
           <EnlaceBoton href="/admin/pedidos" variante="secundario">
             Volver
@@ -69,148 +66,40 @@ export default async function PaginaDetallePedido({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Tarjeta className="p-5">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          <Tarjeta className="p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-zinc-900">Productos</h2>
             <div className="mt-3">
-              <TablaDatos
-                columnas={[
-                  { encabezado: "Producto" },
-                  { encabezado: "Precio unitario", alineacion: "der" },
-                  { encabezado: "Cantidad", alineacion: "der" },
-                  { encabezado: "Subtotal", alineacion: "der" },
-                ]}
-                filas={pedido.detalles.map((detalle) => {
-                  const esBolsa =
-                    detalle.pesoPresentacionKg !== null &&
-                    detalle.unidadVenta === "UNIDAD";
-
-                  return {
-                    id: detalle.id,
-                    celdas: [
-                      <div key="nombre" className="min-w-0">
-                        <Link
-                          href={`/admin/productos/${detalle.productoId}`}
-                          className="text-sm text-zinc-800 hover:underline"
-                        >
-                          {detalle.nombreProducto}
-                        </Link>
-                        <p className="text-xs text-zinc-500">
-                          Venta:{" "}
-                          {etiquetaModalidadLinea({
-                            unidadVenta: detalle.unidadVenta,
-                            pesoPresentacionKg: detalle.pesoPresentacionKg,
-                          })}
-                          {esBolsa
-                            ? ` · Presentación ${detalle.pesoPresentacionKg} kg`
-                            : ""}
-                        </p>
-                      </div>,
-                      <span key="precio" className="whitespace-nowrap">
-                        {formatearMoneda(
-                          detalle.precioUnitario,
-                          moneda,
-                          locale,
-                        )}{" "}
-                        {sufijoPrecioModalidadLinea({
-                          unidadVenta: detalle.unidadVenta,
-                          pesoPresentacionKg: detalle.pesoPresentacionKg,
-                        })}
-                      </span>,
-                      <span key="cantidad" className="whitespace-nowrap">
-                        {esBolsa
-                          ? `${detalle.cantidad} ${
-                              detalle.cantidad === 1 ? "bolsa" : "bolsas"
-                            }`
-                          : formatearCantidad(
-                              detalle.cantidad,
-                              detalle.unidadVenta,
-                              locale,
-                            )}
-                      </span>,
-                      <span
-                        key="subtotal"
-                        className="font-medium text-zinc-900"
-                      >
-                        {formatearMoneda(detalle.subtotal, moneda, locale)}
-                      </span>,
-                    ],
-                  };
-                })}
+              <ProductosPedido
+                detalles={pedido.detalles}
+                moneda={moneda}
+                locale={locale}
               />
             </div>
 
-            <dl className="mt-4 ml-auto w-full max-w-xs space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">Subtotal</dt>
-                <dd className="text-zinc-800">
-                  {formatearMoneda(pedido.subtotal, moneda, locale)}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">Envío</dt>
-                <dd className="text-zinc-800">
-                  {formatearMoneda(pedido.costoEnvio, moneda, locale)}
-                </dd>
-              </div>
-              <div className="flex justify-between border-t border-zinc-100 pt-2">
-                <dt className="font-medium text-zinc-900">Total</dt>
-                <dd className="font-semibold text-zinc-900">
-                  {formatearMoneda(pedido.total, moneda, locale)}
-                </dd>
-              </div>
-            </dl>
+            <TotalesPedido
+              subtotal={pedido.subtotal}
+              costoEnvio={pedido.costoEnvio}
+              total={pedido.total}
+              moneda={moneda}
+              locale={locale}
+            />
           </Tarjeta>
 
-          <Tarjeta className="p-5">
+          <Tarjeta className="p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-zinc-900">
               Historial de pagos
             </h2>
-            {pedido.pagos.length === 0 ? (
-              <p className="mt-3 text-sm text-zinc-500">
-                Todavía no hay pagos registrados.
-              </p>
-            ) : (
-              <div className="mt-3">
-                <TablaDatos
-                  columnas={[
-                    { encabezado: "Fecha" },
-                    { encabezado: "Monto", alineacion: "der" },
-                    { encabezado: "Estado" },
-                    { encabezado: "Usuario" },
-                    { encabezado: "Observación" },
-                  ]}
-                  filas={pedido.pagos.map((pago) => ({
-                    id: pago.id,
-                    celdas: [
-                      <span
-                        key="fecha"
-                        className="whitespace-nowrap text-xs text-zinc-500"
-                      >
-                        {formatearFechaHora(pago.createdAt, locale)}
-                      </span>,
-                      <span key="monto">
-                        {formatearMoneda(pago.monto, moneda, locale)}
-                      </span>,
-                      <Etiqueta key="estado" tono={TONOS_ESTADO_PAGO[pago.estado]}>
-                        {ETIQUETAS_ESTADO_PAGO[pago.estado]}
-                      </Etiqueta>,
-                      <span key="usuario" className="text-zinc-600">
-                        {pago.usuario ?? "—"}
-                      </span>,
-                      <span key="obs" className="text-zinc-500">
-                        {pago.observacion ?? "—"}
-                      </span>,
-                    ],
-                  }))}
-                />
-              </div>
-            )}
+            <PagosPedido
+              pagos={pedido.pagos}
+              moneda={moneda}
+              locale={locale}
+            />
           </Tarjeta>
         </div>
 
-        <div className="space-y-6">
-          <Tarjeta className="p-5">
+        <div className="min-w-0 space-y-6">
+          <Tarjeta className="p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-zinc-900">Cliente</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <Dato etiqueta="Nombre" valor={pedido.clienteNombre} />
@@ -218,12 +107,12 @@ export default async function PaginaDetallePedido({
                 <dt className="text-xs uppercase tracking-wide text-zinc-400">
                   Teléfono
                 </dt>
-                <dd>
+                <dd className="break-words">
                   <a
                     href={`tel:${pedido.clienteTelefono}`}
                     className="inline-flex items-center gap-1 text-zinc-800 hover:underline"
                   >
-                    <Phone className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    <Phone className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
                     {pedido.clienteTelefono}
                   </a>
                 </dd>
@@ -231,7 +120,7 @@ export default async function PaginaDetallePedido({
             </dl>
           </Tarjeta>
 
-          <Tarjeta className="p-5">
+          <Tarjeta className="p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-zinc-900">Entrega</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <Dato
@@ -267,7 +156,7 @@ export default async function PaginaDetallePedido({
 
           {esAdmin ? (
             <>
-              <Tarjeta className="p-5">
+              <Tarjeta className="p-4 sm:p-5">
                 <h2 className="mb-3 text-sm font-semibold text-zinc-900">
                   Estado del pedido
                 </h2>
@@ -277,7 +166,7 @@ export default async function PaginaDetallePedido({
                 />
               </Tarjeta>
 
-              <Tarjeta className="p-5">
+              <Tarjeta className="p-4 sm:p-5">
                 <h2 className="mb-3 text-sm font-semibold text-zinc-900">
                   Estado del pago
                 </h2>
