@@ -73,6 +73,10 @@ export function TablaProductos({
             producto.stockActual,
             producto.stockMinimo,
           );
+          const modalidadBase = producto.modalidades.find(
+            (modalidad) => modalidad.esBase,
+          );
+          const esPeso = producto.unidadStock === "KILOGRAMO";
 
           return {
             id: producto.id,
@@ -107,34 +111,41 @@ export function TablaProductos({
                   {producto.nombre}
                 </Link>
                 <p className="truncate text-xs text-zinc-500">{producto.sku}</p>
-                {producto.permiteVentaSuelta ? (
-                  <Etiqueta tono="info">Venta suelta</Etiqueta>
+                {producto.modalidades.length > 1 ? (
+                  <Etiqueta tono="info">
+                    {producto.modalidades.length} modalidades
+                  </Etiqueta>
                 ) : null}
               </div>,
               <span key="categoria" className="text-sm text-zinc-600">
                 {producto.categoria}
               </span>,
               <div key="precios" className="space-y-0.5">
-                {producto.precios.length === 0 ? (
+                {producto.modalidades.length === 0 ? (
                   <span className="text-xs text-zinc-400">Sin precios</span>
                 ) : (
-                  producto.precios.map((precio) => (
+                  producto.modalidades.map((modalidad) => (
                     <p
-                      key={precio.metodoPagoId}
+                      key={modalidad.modalidadId}
                       className="whitespace-nowrap text-xs text-zinc-600"
                     >
-                      <span className="text-zinc-400">{precio.metodo}:</span>{" "}
-                      {formatearMoneda(precio.precio, moneda, locale)}
+                      <span className="text-zinc-400">
+                        {modalidad.nombre}:
+                      </span>{" "}
+                      {modalidad.precio === null
+                        ? "sin precio"
+                        : formatearMoneda(modalidad.precio, moneda, locale)}
+                      {modalidad.unidadVenta === "KILOGRAMO" ? " / kg" : ""}
                     </p>
                   ))
                 )}
               </div>,
               <div key="stock" className="space-y-1">
                 <p className="text-sm font-medium text-zinc-900">
-                  {producto.permiteVentaSuelta
+                  {esPeso
                     ? formatearStockPresentacion(
                         producto.stockActual,
-                        producto.pesoPresentacionKg,
+                        modalidadBase?.contenido ?? null,
                       )
                     : producto.stockActual}
                 </p>

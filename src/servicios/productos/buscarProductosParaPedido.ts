@@ -1,26 +1,77 @@
 import { prisma } from "@/lib/prisma/cliente";
 import type { Prisma } from "@/generated/prisma/client";
-import type { PrecioListado } from "@/servicios/productos/listarProductos";
-import type { UnidadVenta } from "@/generated/prisma/enums";
+import type { TipoPrecio, UnidadVenta } from "@/generated/prisma/enums";
+
+export type ReglaPrecioParaPedido = {
+  metodoPagoId: string | null;
+  cantidadDesde: number;
+  cantidadHasta: number | null;
+  tipoPrecio: TipoPrecio;
+  precio: number;
+};
+
+export type ModalidadParaPedido = {
+  id: string;
+  nombre: string;
+  unidadVenta: UnidadVenta;
+  contenido: number | null;
+  etiquetaPresentacion: string | null;
+  esBase: boolean;
+  reglas: ReglaPrecioParaPedido[];
+};
 
 export type ProductoParaPedido = {
   id: string;
   nombre: string;
   sku: string | null;
   barcode: string | null;
-  unidadVenta: UnidadVenta;
-  permiteVentaSuelta: boolean;
-  pesoPresentacionKg: number | null;
+  imageUrl: string | null;
+  unidadStock: UnidadVenta;
   stockActual: number;
-  precios: PrecioListado[];
-  preciosSuelto: PrecioListado[];
+  modalidades: ModalidadParaPedido[];
 };
 
 const LIMITE = 10;
 
+function mapearModalidades(
+  modalidades: {
+    id: string;
+    nombre: string;
+    unidadVenta: UnidadVenta;
+    contenido: Prisma.Decimal | null;
+    etiquetaPresentacion: string | null;
+    esBase: boolean;
+    reglas: {
+      metodoPagoId: string | null;
+      cantidadDesde: Prisma.Decimal;
+      cantidadHasta: Prisma.Decimal | null;
+      tipoPrecio: TipoPrecio;
+      precio: Prisma.Decimal;
+    }[];
+  }[],
+): ModalidadParaPedido[] {
+  return modalidades.map((modalidad) => ({
+    id: modalidad.id,
+    nombre: modalidad.nombre,
+    unidadVenta: modalidad.unidadVenta,
+    contenido:
+      modalidad.contenido === null ? null : Number(modalidad.contenido),
+    etiquetaPresentacion: modalidad.etiquetaPresentacion,
+    esBase: modalidad.esBase,
+    reglas: modalidad.reglas.map((regla) => ({
+      metodoPagoId: regla.metodoPagoId,
+      cantidadDesde: Number(regla.cantidadDesde),
+      cantidadHasta:
+        regla.cantidadHasta === null ? null : Number(regla.cantidadHasta),
+      tipoPrecio: regla.tipoPrecio,
+      precio: Number(regla.precio),
+    })),
+  }));
+}
+
 // Busca productos activos por nombre, SKU o código de barras para agregarlos a
-// un pedido. Devuelve los datos necesarios para mostrarlos y cotizarlos; el
-// precio definitivo lo resuelve el servidor al crear el pedido.
+// un pedido. Devuelve modalidades y reglas; el precio definitivo lo resuelve el
+// servidor al crear el pedido.
 export async function buscarProductosParaPedido(
   busqueda: string,
 ): Promise<ProductoParaPedido[]> {
@@ -44,56 +95,43 @@ export async function buscarProductosParaPedido(
       nombre: true,
       sku: true,
       barcode: true,
-      unidadVenta: true,
-      permiteVentaSuelta: true,
-      pesoPresentacionKg: true,
+      imageUrl: true,
+      unidadStock: true,
       stockActual: true,
-      precios: {
+      modalidades: {
         where: { activo: true },
+        orderBy: [{ orden: "asc" }, { nombre: "asc" }],
         select: {
-          metodoPagoId: true,
-          precio: true,
-          metodoPago: { select: { nombre: true, codigo: true } },
-        },
-      },
-      preciosSuelto: {
-        where: { activo: true },
-        select: {
-          metodoPagoId: true,
-          precio: true,
-          metodoPago: { select: { nombre: true, codigo: true } },
+          id: true,
+          nombre: true,
+          unidadVenta: true,
+          contenido: true,
+          etiquetaPresentacion: true,
+          esBase: true,
+          reglas: {
+            where: { activo: true },
+            orderBy: [{ cantidadDesde: "asc" }, { precio: "asc" }],
+            select: {
+              metodoPagoId: true,
+              cantidadDesde: true,
+              cantidadHasta: true,
+              tipoPrecio: true,
+              precio: true,
+            },
+          },
         },
       },
     },
   });
-
-  const mapearPrecios = (
-    precios: {
-      metodoPagoId: string;
-      precio: Prisma.Decimal;
-      metodoPago: { nombre: string; codigo: string };
-    }[],
-  ): PrecioListado[] =>
-    precios.map((precio) => ({
-      metodoPagoId: precio.metodoPagoId,
-      metodo: precio.metodoPago.nombre,
-      codigo: precio.metodoPago.codigo,
-      precio: Number(precio.precio),
-    }));
 
   return productos.map((producto) => ({
     id: producto.id,
     nombre: producto.nombre,
     sku: producto.sku,
     barcode: producto.barcode,
-    unidadVenta: producto.unidadVenta,
-    permiteVentaSuelta: producto.permiteVentaSuelta,
-    pesoPresentacionKg:
-      producto.pesoPresentacionKg === null
-        ? null
-        : Number(producto.pesoPresentacionKg),
+    imageUrl: producto.imageUrl,
+    unidadStock: producto.unidadStock,
     stockActual: Number(producto.stockActual),
-    precios: mapearPrecios(producto.precios),
-    preciosSuelto: mapearPrecios(producto.preciosSuelto),
+    modalidades: mapearModalidades(producto.modalidades),
   }));
 }

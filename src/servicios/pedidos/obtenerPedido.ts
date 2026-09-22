@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma/cliente";
+import type { DesglosePrecio } from "@/servicios/precios/calcularPrecioLinea";
 import type {
   EstadoPago,
   EstadoPedido,
@@ -11,10 +12,13 @@ export type DetallePedidoItem = {
   productoId: string;
   nombreProducto: string;
   unidadVenta: UnidadVenta;
+  modalidadNombre: string | null;
   pesoPresentacionKg: number | null;
+  contenido: number | null;
   precioUnitario: number;
   cantidad: number;
   subtotal: number;
+  desglosePrecio: DesglosePrecio | null;
 };
 
 export type PagoPedido = {
@@ -88,10 +92,13 @@ export async function obtenerPedido(
           productoId: true,
           nombreProducto: true,
           unidadVenta: true,
+          modalidadNombre: true,
           pesoPresentacionKg: true,
+          contenido: true,
           precioUnitario: true,
           cantidad: true,
           subtotal: true,
+          desglosePrecio: true,
         },
       },
       pagos: {
@@ -139,13 +146,16 @@ export async function obtenerPedido(
       productoId: detalle.productoId,
       nombreProducto: detalle.nombreProducto,
       unidadVenta: detalle.unidadVenta,
+      modalidadNombre: detalle.modalidadNombre,
       pesoPresentacionKg:
         detalle.pesoPresentacionKg === null
           ? null
           : Number(detalle.pesoPresentacionKg),
+      contenido: detalle.contenido === null ? null : Number(detalle.contenido),
       precioUnitario: Number(detalle.precioUnitario),
       cantidad: Number(detalle.cantidad),
       subtotal: Number(detalle.subtotal),
+      desglosePrecio: detalle.desglosePrecio as DesglosePrecio | null,
     })),
     pagos: pedido.pagos.map((pago) => ({
       id: pago.id,

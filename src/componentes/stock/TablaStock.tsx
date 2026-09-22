@@ -69,15 +69,15 @@ export function TablaStock({
               {producto.categoria}
             </span>,
             <span key="actual" className="text-sm font-medium text-zinc-900">
-              {producto.permiteVentaSuelta
+              {producto.unidadStock === "KILOGRAMO"
                 ? formatearStockPresentacion(
                     producto.stockActual,
-                    producto.pesoPresentacionKg,
+                    producto.contenidoPresentacion,
                   )
                 : producto.stockActual}
             </span>,
             <span key="minimo" className="text-sm text-zinc-500">
-              {producto.permiteVentaSuelta
+              {producto.unidadStock === "KILOGRAMO"
                 ? `${producto.stockMinimo} kg`
                 : producto.stockMinimo}
             </span>,

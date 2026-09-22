@@ -198,11 +198,43 @@ en `src/auth.ts` resuelve el host desde `x-forwarded-host`. Definirla con
   `calcularTotalesPedido` (precios con `Prisma.Decimal`), `validarStockPedido` y
   `calcularCostoEnvio` (sobre `ConfiguracionEnvio`). El cliente nunca fija
   precios ni totales.
-- Modalidad de venta por producto (`Producto.unidadVenta`): `UNIDAD` o
-  `KILOGRAMO`. El pedido congela la modalidad en `DetallePedido.unidadVenta`.
+- Modalidad de venta por producto mediante `ModalidadVenta` (una o varias). El
+  pedido congela la modalidad en `DetallePedido.modalidadNombre`, `unidadVenta`,
+  `contenido` y `desglosePrecio`.
+- Precios: el motor puro `servicios/precios/calcularPrecioLinea` resuelve el
+  precio a partir de las `ReglaPrecio` de la modalidad (escalas por cantidad y
+  promociones `TOTAL`, con método de pago específico o genérico). Ver
+  “Módulo de precios”.
 - Precisión: stock y cantidades en `Decimal(12,3)`; dinero en `Decimal(12,2)`.
 - Entrega: snapshot en `Pedido` (dirección, localidad, referencia, `mapsUrl`,
   `latitud`, `longitud`). La URL de Maps se valida en
   `lib/validaciones/ubicacion` (extensible a otros proveedores).
 - El stock se valida al crear y se descuenta al pasar a `CONFIRMADO` con una
   actualización condicional (sin stock negativo en concurrencia).
+
+## Módulo de precios (modalidades y reglas)
+
+- Entidades: `ModalidadVenta`, `ReglaPrecio` y `ReglaPrecioHistorial` (migración
+  `0010_modalidades_y_reglas_precio`, aditiva con backfill). Reemplazan el modelo
+  plano `PrecioProducto`/`PrecioProductoSuelto`, que queda como legado.
+- Un producto tiene una o varias modalidades (`unidadVenta`, `contenido`,
+  `etiquetaPresentacion`, `esBase`). `Producto.unidadStock` es la unidad canónica
+  del stock (`KILOGRAMO` si hay modalidad por kg).
+- Cada modalidad tiene reglas de precio: rango `cantidadDesde`/`cantidadHasta`,
+  `tipoPrecio` (`UNITARIO` o `TOTAL`), `precio` y `metodoPagoId` opcional.
+- Cálculo en un servicio puro y testeado
+  (`servicios/precios/calcularPrecioLinea.ts`):
+  1. usa reglas específicas del método de pago; si no cubren, las genéricas;
+  2. combina promociones `TOTAL` en múltiplos completos con el resto al precio
+     `UNITARIO` de la escala, eligiendo el menor costo (DP en milésimas);
+  3. devuelve `precioUnitario`, `subtotal` y un `desglose` con los packs.
+- Tests en `servicios/precios/precio.test.ts` (`npm test`).
+- Historial y auditoría: al cambiar el precio de una regla se registra
+  `ReglaPrecioHistorial` y `PRECIO_MODIFICADO`.
+- Persistencia y edición: `guardarModalidadesProducto` reconcilia modalidades y
+  reglas (baja lógica de las que ya no vienen; historial de precios al cambiar).
+- Snapshot: `DetallePedido` congela modalidad, contenido, precio, subtotal y
+  desglose. Un pedido histórico no se recalcula.
+- Administración: sección "Modalidades y precios" en el formulario de producto
+  (`SeccionModalidadesPrecios`). Productos simples usan una sola modalidad con
+  un precio; las escalas y promociones son opcionales.

@@ -3,6 +3,8 @@ import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { mensajeConflictoUnico } from "@/lib/errores/mensajeConflictoUnico";
 import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
+import { guardarModalidadesProducto } from "@/servicios/productos/guardarModalidadesProducto";
+import { derivarUnidadStock } from "@/lib/utilidades/derivarUnidadStock";
 import type { DatosProducto } from "@/servicios/productos/crearProducto";
 
 // Operación de imagen solicitada al editar un producto. `mantener` no toca la
@@ -25,15 +27,6 @@ export async function actualizarProducto(
       id: true,
       nombre: true,
       imagePublicId: true,
-      precios: { select: { id: true, metodoPagoId: true, precio: true } },
-      preciosSuelto: {
-        select: {
-          id: true,
-          metodoPagoId: true,
-          precio: true,
-          activo: true,
-        },
-      },
       proveedores: {
         select: { id: true, proveedorId: true, esPrincipal: true },
       },
@@ -70,234 +63,123 @@ export async function actualizarProducto(
 
   const publicIdAnterior = await prisma
     .$transaction(async (tx) => {
-    await tx.producto.update({
-      where: { id },
-      data: {
-        nombre: datos.nombre,
-        descripcion: datos.descripcion ?? null,
-        sku: datos.sku,
-        barcode: datos.barcode ?? null,
-        categoriaId: datos.categoriaId,
-        unidadVenta: datos.unidadVenta,
-        permiteVentaSuelta: datos.permiteVentaSuelta,
-        pesoPresentacionKg: datos.permiteVentaSuelta
-          ? (datos.pesoPresentacionKg ?? null)
-          : null,
-        stockMinimo: datos.stockMinimo,
-        unidadesPorBulto: datos.unidadesPorBulto,
-      },
-    });
-
-    for (const precio of datos.precios) {
-      const existente = producto.precios.find(
-        (actual) => actual.metodoPagoId === precio.metodoPagoId,
-      );
-
-      if (!existente) {
-        await tx.precioProducto.create({
-          data: {
-            productoId: id,
-            metodoPagoId: precio.metodoPagoId,
-            precio: precio.precio,
-          },
-        });
-        continue;
-      }
-
-      const anterior = Number(existente.precio);
-
-      if (anterior === precio.precio) continue;
-
-      await tx.precioProducto.update({
-        where: { id: existente.id },
-        data: { precio: precio.precio },
-      });
-
-      await tx.precioProductoHistorial.create({
+      await tx.producto.update({
+        where: { id },
         data: {
-          productoId: id,
-          metodoPagoId: precio.metodoPagoId,
-          precioAnterior: anterior,
-          precioNuevo: precio.precio,
-          usuarioId,
+          nombre: datos.nombre,
+          descripcion: datos.descripcion ?? null,
+          sku: datos.sku,
+          barcode: datos.barcode ?? null,
+          categoriaId: datos.categoriaId,
+          unidadStock: derivarUnidadStock(datos.modalidades),
+          stockMinimo: datos.stockMinimo,
+          unidadesPorBulto: datos.unidadesPorBulto,
         },
       });
 
-      await registrarAuditoria(
-        {
-          usuarioId,
-          accion: ACCIONES_AUDITORIA.PRECIO_MODIFICADO,
-          entidad: "Producto",
-          entidadId: id,
-          datos: {
-            metodoPagoId: precio.metodoPagoId,
-            precioAnterior: anterior,
-            precioNuevo: precio.precio,
-          },
-        },
-        tx,
+      await guardarModalidadesProducto(tx, id, datos.modalidades, usuarioId);
+
+      // Proveedores: se preservan los datos de costo/código de los vínculos
+      // existentes; solo se actualiza el principal y se agregan o quitan.
+      const vinculosActuales = new Map(
+        producto.proveedores.map((vinculo) => [vinculo.proveedorId, vinculo]),
       );
-    }
 
-    // Precios de venta suelta. Si la modalidad está deshabilitada, se
-    // desactivan los existentes sin borrarlos. Si está habilitada, se crean o
-    // actualizan y se registra el historial (`esSuelto = true`).
-    if (!datos.permiteVentaSuelta) {
-      await tx.precioProductoSuelto.updateMany({
-        where: { productoId: id, activo: true },
-        data: { activo: false },
-      });
-    } else {
-      for (const precio of datos.preciosSuelto) {
-        const existente = producto.preciosSuelto.find(
-          (actual) => actual.metodoPagoId === precio.metodoPagoId,
-        );
+      for (const proveedorId of datos.proveedorIds) {
+        const esPrincipal = proveedorId === datos.proveedorPrincipalId;
+        const vinculo = vinculosActuales.get(proveedorId);
 
-        if (!existente) {
-          await tx.precioProductoSuelto.create({
-            data: {
-              productoId: id,
-              metodoPagoId: precio.metodoPagoId,
-              precio: precio.precio,
-            },
-          });
+        if (vinculo) {
+          if (vinculo.esPrincipal !== esPrincipal) {
+            await tx.productoProveedor.update({
+              where: { id: vinculo.id },
+              data: { esPrincipal },
+            });
+          }
           continue;
         }
 
-        const anterior = Number(existente.precio);
-
-        if (existente.activo && anterior === precio.precio) continue;
-
-        await tx.precioProductoSuelto.update({
-          where: { id: existente.id },
-          data: { precio: precio.precio, activo: true },
+        await tx.productoProveedor.create({
+          data: { productoId: id, proveedorId, esPrincipal },
         });
+      }
 
-        if (anterior === precio.precio) continue;
+      const aEliminar = producto.proveedores
+        .filter((vinculo) => !datos.proveedorIds.includes(vinculo.proveedorId))
+        .map((vinculo) => vinculo.id);
 
-        await tx.precioProductoHistorial.create({
-          data: {
-            productoId: id,
-            metodoPagoId: precio.metodoPagoId,
-            precioAnterior: anterior,
-            precioNuevo: precio.precio,
-            esSuelto: true,
-            usuarioId,
-          },
+      if (aEliminar.length > 0) {
+        await tx.productoProveedor.deleteMany({
+          where: { id: { in: aEliminar } },
+        });
+      }
+
+      // Imagen: la subida a Cloudinary ya ocurrió fuera de la transacción para
+      // no bloquear la conexión a la base de datos. Aquí solo se persiste la
+      // referencia; el recurso anterior se elimina después del commit.
+      if (imagen.tipo === "establecer") {
+        await tx.producto.update({
+          where: { id },
+          data: { imageUrl: imagen.url, imagePublicId: imagen.publicId },
         });
 
         await registrarAuditoria(
           {
             usuarioId,
-            accion: ACCIONES_AUDITORIA.PRECIO_MODIFICADO,
+            accion: producto.imagePublicId
+              ? ACCIONES_AUDITORIA.IMAGEN_REEMPLAZADA
+              : ACCIONES_AUDITORIA.IMAGEN_AGREGADA,
             entidad: "Producto",
             entidadId: id,
             datos: {
-              metodoPagoId: precio.metodoPagoId,
-              esSuelto: true,
-              precioAnterior: anterior,
-              precioNuevo: precio.precio,
+              publicId: imagen.publicId,
+              publicIdAnterior: producto.imagePublicId ?? null,
             },
           },
           tx,
         );
+      } else if (imagen.tipo === "eliminar") {
+        await tx.producto.update({
+          where: { id },
+          data: { imageUrl: null, imagePublicId: null },
+        });
+
+        await registrarAuditoria(
+          {
+            usuarioId,
+            accion: ACCIONES_AUDITORIA.IMAGEN_ELIMINADA,
+            entidad: "Producto",
+            entidadId: id,
+            datos: { publicIdAnterior: producto.imagePublicId ?? null },
+          },
+          tx,
+        );
       }
-    }
-
-    // Proveedores: se preservan los datos de costo/código de los vínculos
-    // existentes; solo se actualiza el principal y se agregan o quitan.
-    const vinculosActuales = new Map(
-      producto.proveedores.map((vinculo) => [vinculo.proveedorId, vinculo]),
-    );
-
-    for (const proveedorId of datos.proveedorIds) {
-      const esPrincipal = proveedorId === datos.proveedorPrincipalId;
-      const vinculo = vinculosActuales.get(proveedorId);
-
-      if (vinculo) {
-        if (vinculo.esPrincipal !== esPrincipal) {
-          await tx.productoProveedor.update({
-            where: { id: vinculo.id },
-            data: { esPrincipal },
-          });
-        }
-        continue;
-      }
-
-      await tx.productoProveedor.create({
-        data: { productoId: id, proveedorId, esPrincipal },
-      });
-    }
-
-    const aEliminar = producto.proveedores
-      .filter((vinculo) => !datos.proveedorIds.includes(vinculo.proveedorId))
-      .map((vinculo) => vinculo.id);
-
-    if (aEliminar.length > 0) {
-      await tx.productoProveedor.deleteMany({
-        where: { id: { in: aEliminar } },
-      });
-    }
-
-    // Imagen: la subida a Cloudinary ya ocurrió fuera de la transacción para
-    // no bloquear la conexión a la base de datos. Aquí solo se persiste la
-    // referencia; el recurso anterior se elimina después del commit.
-    if (imagen.tipo === "establecer") {
-      await tx.producto.update({
-        where: { id },
-        data: { imageUrl: imagen.url, imagePublicId: imagen.publicId },
-      });
 
       await registrarAuditoria(
         {
           usuarioId,
-          accion: producto.imagePublicId
-            ? ACCIONES_AUDITORIA.IMAGEN_REEMPLAZADA
-            : ACCIONES_AUDITORIA.IMAGEN_AGREGADA,
+          accion: ACCIONES_AUDITORIA.PRODUCTO_EDITADO,
           entidad: "Producto",
           entidadId: id,
           datos: {
-            publicId: imagen.publicId,
-            publicIdAnterior: producto.imagePublicId ?? null,
+            nombre: datos.nombre,
+            sku: datos.sku,
+            barcode: datos.barcode ?? null,
+            modalidades: datos.modalidades.length,
           },
         },
         tx,
       );
-    } else if (imagen.tipo === "eliminar") {
-      await tx.producto.update({
-        where: { id },
-        data: { imageUrl: null, imagePublicId: null },
-      });
 
-      await registrarAuditoria(
-        {
-          usuarioId,
-          accion: ACCIONES_AUDITORIA.IMAGEN_ELIMINADA,
-          entidad: "Producto",
-          entidadId: id,
-          datos: { publicIdAnterior: producto.imagePublicId ?? null },
-        },
-        tx,
-      );
-    }
-
-    await registrarAuditoria(
-      {
-        usuarioId,
-        accion: ACCIONES_AUDITORIA.PRODUCTO_EDITADO,
-        entidad: "Producto",
-        entidadId: id,
-        datos: {
-          nombre: datos.nombre,
-          sku: datos.sku,
-          barcode: datos.barcode ?? null,
-        },
-      },
-      tx,
-    );
-
-    return imagen.tipo === "mantener" ? null : (producto.imagePublicId ?? null);
-  })
+      return imagen.tipo === "mantener"
+        ? null
+        : (producto.imagePublicId ?? null);
+    },
+    // Las modalidades y sus reglas agregan varias consultas; en bases remotas el
+    // timeout por defecto (5 s) puede resultar insuficiente.
+    { timeout: 30_000 },
+  )
     .catch((error) => {
       const mensaje = mensajeConflictoUnico(error, {
         barcode: "Ya existe otro producto con ese código de barras.",

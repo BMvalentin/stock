@@ -3,7 +3,9 @@ import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { mensajeConflictoUnico } from "@/lib/errores/mensajeConflictoUnico";
 import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
-import type { UnidadVenta } from "@/generated/prisma/enums";
+import { guardarModalidadesProducto } from "@/servicios/productos/guardarModalidadesProducto";
+import { derivarUnidadStock } from "@/lib/utilidades/derivarUnidadStock";
+import type { ModalidadEntrada } from "@/tipos/producto";
 
 export type DatosProducto = {
   nombre: string;
@@ -11,18 +13,17 @@ export type DatosProducto = {
   sku: string | null;
   barcode?: string;
   categoriaId: string;
-  unidadVenta: UnidadVenta;
-  permiteVentaSuelta: boolean;
-  pesoPresentacionKg?: number;
   stockMinimo: number;
   unidadesPorBulto: number;
-  precios: { metodoPagoId: string; precio: number }[];
-  preciosSuelto: { metodoPagoId: string; precio: number }[];
+  // Modalidades de venta con sus reglas de precio. Al menos una.
+  modalidades: ModalidadEntrada[];
   proveedorIds: string[];
   proveedorPrincipalId?: string;
   imagen?: { url: string; publicId: string };
 };
 
+// Unidad canónica del stock: si el producto tiene alguna modalidad por
+// kilogramo, el stock se lleva en kg; si no, en unidades.
 export async function crearProducto(
   datos: DatosProducto & { stockInicial: number },
   usuarioId: string,
@@ -50,7 +51,8 @@ export async function crearProducto(
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(
+      async (tx) => {
       const producto = await tx.producto.create({
         data: {
           nombre: datos.nombre,
@@ -58,30 +60,12 @@ export async function crearProducto(
           sku: datos.sku,
           barcode: datos.barcode ?? null,
           categoriaId: datos.categoriaId,
-          unidadVenta: datos.unidadVenta,
-          permiteVentaSuelta: datos.permiteVentaSuelta,
-          pesoPresentacionKg: datos.permiteVentaSuelta
-            ? (datos.pesoPresentacionKg ?? null)
-            : null,
+          unidadStock: derivarUnidadStock(datos.modalidades),
           stockActual: datos.stockInicial,
           stockMinimo: datos.stockMinimo,
           unidadesPorBulto: datos.unidadesPorBulto,
           imageUrl: datos.imagen?.url ?? null,
           imagePublicId: datos.imagen?.publicId ?? null,
-          precios: {
-            create: datos.precios.map((precio) => ({
-              metodoPagoId: precio.metodoPagoId,
-              precio: precio.precio,
-            })),
-          },
-          preciosSuelto: datos.permiteVentaSuelta
-            ? {
-                create: datos.preciosSuelto.map((precio) => ({
-                  metodoPagoId: precio.metodoPagoId,
-                  precio: precio.precio,
-                })),
-              }
-            : undefined,
           proveedores:
             datos.proveedorIds.length > 0
               ? {
@@ -93,6 +77,13 @@ export async function crearProducto(
               : undefined,
         },
       });
+
+      await guardarModalidadesProducto(
+        tx,
+        producto.id,
+        datos.modalidades,
+        usuarioId,
+      );
 
       if (datos.stockInicial > 0) {
         await tx.movimientoStock.create({
@@ -118,11 +109,8 @@ export async function crearProducto(
             nombre: datos.nombre,
             sku: datos.sku,
             barcode: datos.barcode ?? null,
-            unidadVenta: datos.unidadVenta,
-            permiteVentaSuelta: datos.permiteVentaSuelta,
-            pesoPresentacionKg: datos.permiteVentaSuelta
-              ? (datos.pesoPresentacionKg ?? null)
-              : null,
+            unidadStock: derivarUnidadStock(datos.modalidades),
+            modalidades: datos.modalidades.length,
             stockInicial: datos.stockInicial,
           },
         },
@@ -143,7 +131,11 @@ export async function crearProducto(
       }
 
       return { id: producto.id };
-    });
+    },
+    // Las modalidades y sus reglas agregan varias consultas; en bases remotas el
+    // timeout por defecto (5 s) puede resultar insuficiente.
+    { timeout: 30_000 },
+  );
   } catch (error) {
     const mensaje = mensajeConflictoUnico(error, {
       barcode: "Ya existe un producto con ese código de barras.",

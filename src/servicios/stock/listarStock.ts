@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma/cliente";
 import type { Prisma } from "@/generated/prisma/client";
+import type { UnidadVenta } from "@/generated/prisma/enums";
 
 export type FiltrosStock = {
   busqueda?: string;
@@ -15,8 +16,10 @@ export type ProductoStock = {
   nombre: string;
   sku: string | null;
   categoria: string;
-  permiteVentaSuelta: boolean;
-  pesoPresentacionKg: number | null;
+  unidadStock: UnidadVenta;
+  // Contenido de la modalidad base (ej. 15 kg por bolsa) para mostrar la
+  // equivalencia en presentaciones. null = sin presentación.
+  contenidoPresentacion: number | null;
   stockActual: number;
   stockMinimo: number;
   actualizado: Date;
@@ -71,31 +74,37 @@ export async function listarStock(
         id: true,
         nombre: true,
         sku: true,
-        permiteVentaSuelta: true,
-        pesoPresentacionKg: true,
+        unidadStock: true,
         stockActual: true,
         stockMinimo: true,
         updatedAt: true,
         categoria: { select: { nombre: true } },
+        modalidades: {
+          where: { activo: true, esBase: true },
+          orderBy: [{ orden: "asc" }],
+          take: 1,
+          select: { contenido: true },
+        },
       },
     }),
   ]);
 
   return {
     total,
-    productos: productos.map((producto) => ({
-      id: producto.id,
-      nombre: producto.nombre,
-      sku: producto.sku,
-      categoria: producto.categoria.nombre,
-      permiteVentaSuelta: producto.permiteVentaSuelta,
-      pesoPresentacionKg:
-        producto.pesoPresentacionKg === null
-          ? null
-          : Number(producto.pesoPresentacionKg),
-      stockActual: Number(producto.stockActual),
-      stockMinimo: Number(producto.stockMinimo),
-      actualizado: producto.updatedAt,
-    })),
+    productos: productos.map((producto) => {
+      const contenido = producto.modalidades[0]?.contenido ?? null;
+
+      return {
+        id: producto.id,
+        nombre: producto.nombre,
+        sku: producto.sku,
+        categoria: producto.categoria.nombre,
+        unidadStock: producto.unidadStock,
+        contenidoPresentacion: contenido === null ? null : Number(contenido),
+        stockActual: Number(producto.stockActual),
+        stockMinimo: Number(producto.stockMinimo),
+        actualizado: producto.updatedAt,
+      };
+    }),
   };
 }

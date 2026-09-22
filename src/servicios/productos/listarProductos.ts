@@ -13,11 +13,16 @@ export type FiltrosProductos = {
   porPagina: number;
 };
 
-export type PrecioListado = {
-  metodoPagoId: string;
-  metodo: string;
-  codigo: string;
-  precio: number;
+// Resumen de una modalidad para el listado: nombre y precio unitario de
+// referencia (la regla `UNITARIO` más básica) para mostrar en la tabla.
+export type ModalidadListado = {
+  modalidadId: string;
+  nombre: string;
+  unidadVenta: UnidadVenta;
+  contenido: number | null;
+  etiquetaPresentacion: string | null;
+  esBase: boolean;
+  precio: number | null;
 };
 
 export type ProductoListado = {
@@ -26,14 +31,12 @@ export type ProductoListado = {
   sku: string | null;
   barcode: string | null;
   activo: boolean;
-  unidadVenta: UnidadVenta;
-  permiteVentaSuelta: boolean;
-  pesoPresentacionKg: number | null;
+  unidadStock: UnidadVenta;
   stockActual: number;
   stockMinimo: number;
   categoria: string;
   imageUrl: string | null;
-  precios: PrecioListado[];
+  modalidades: ModalidadListado[];
   cantidadProveedores: number;
 };
 
@@ -94,6 +97,16 @@ function construirOrden(
   }
 }
 
+function precioReferencia(
+  reglas: { metodoPagoId: string | null; tipoPrecio: string; precio: Prisma.Decimal }[],
+): number | null {
+  const unitarias = reglas.filter((regla) => regla.tipoPrecio === "UNITARIO");
+  const elegida =
+    unitarias.find((regla) => regla.metodoPagoId === null) ?? unitarias[0];
+
+  return elegida ? Number(elegida.precio) : null;
+}
+
 export async function listarProductos(
   filtros: FiltrosProductos,
 ): Promise<ResultadoProductos> {
@@ -112,18 +125,29 @@ export async function listarProductos(
         sku: true,
         barcode: true,
         activo: true,
-        unidadVenta: true,
-        permiteVentaSuelta: true,
-        pesoPresentacionKg: true,
+        unidadStock: true,
         stockActual: true,
         stockMinimo: true,
         imageUrl: true,
         categoria: { select: { nombre: true } },
-        precios: {
+        modalidades: {
+          where: { activo: true },
+          orderBy: [{ orden: "asc" }, { nombre: "asc" }],
           select: {
-            metodoPagoId: true,
-            precio: true,
-            metodoPago: { select: { nombre: true, codigo: true } },
+            id: true,
+            nombre: true,
+            unidadVenta: true,
+            contenido: true,
+            etiquetaPresentacion: true,
+            esBase: true,
+            reglas: {
+              where: { activo: true },
+              select: {
+                metodoPagoId: true,
+                tipoPrecio: true,
+                precio: true,
+              },
+            },
           },
         },
         _count: { select: { proveedores: true } },
@@ -139,21 +163,20 @@ export async function listarProductos(
       sku: producto.sku,
       barcode: producto.barcode,
       activo: producto.activo,
-      unidadVenta: producto.unidadVenta,
-      permiteVentaSuelta: producto.permiteVentaSuelta,
-      pesoPresentacionKg:
-        producto.pesoPresentacionKg === null
-          ? null
-          : Number(producto.pesoPresentacionKg),
+      unidadStock: producto.unidadStock,
       stockActual: Number(producto.stockActual),
       stockMinimo: Number(producto.stockMinimo),
       categoria: producto.categoria.nombre,
       imageUrl: producto.imageUrl,
-      precios: producto.precios.map((precio) => ({
-        metodoPagoId: precio.metodoPagoId,
-        metodo: precio.metodoPago.nombre,
-        codigo: precio.metodoPago.codigo,
-        precio: Number(precio.precio),
+      modalidades: producto.modalidades.map((modalidad) => ({
+        modalidadId: modalidad.id,
+        nombre: modalidad.nombre,
+        unidadVenta: modalidad.unidadVenta,
+        contenido:
+          modalidad.contenido === null ? null : Number(modalidad.contenido),
+        etiquetaPresentacion: modalidad.etiquetaPresentacion,
+        esBase: modalidad.esBase,
+        precio: precioReferencia(modalidad.reglas),
       })),
       cantidadProveedores: producto._count.proveedores,
     })),

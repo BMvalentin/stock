@@ -1,13 +1,19 @@
 import type { UnidadVenta } from "@/generated/prisma/enums";
 
-// Etiqueta de la modalidad vendida en una línea de pedido. Distingue la bolsa
-// de la venta suelta cuando el producto tiene presentación; los productos sin
-// presentación mantienen sus etiquetas genéricas ("Unidad" / "Por kg").
+// Etiqueta de la modalidad vendida en una línea de pedido. Usa el nombre de la
+// modalidad si está disponible (pedidos nuevos) y, para pedidos históricos, cae
+// a la lógica anterior (bolsa vs. suelto según la presentación).
 export function etiquetaModalidadLinea(linea: {
+  modalidadNombre?: string | null;
   unidadVenta: UnidadVenta;
-  pesoPresentacionKg: number | null;
+  contenido?: number | null;
+  pesoPresentacionKg?: number | null;
 }): string {
-  if (linea.pesoPresentacionKg !== null) {
+  if (linea.modalidadNombre) return linea.modalidadNombre;
+
+  const presentacion = linea.contenido ?? linea.pesoPresentacionKg ?? null;
+
+  if (presentacion !== null) {
     return linea.unidadVenta === "UNIDAD" ? "Bolsa" : "Suelto";
   }
 

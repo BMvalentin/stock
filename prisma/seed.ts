@@ -124,30 +124,39 @@ async function sembrarCatalogo(
   ];
 
   for (const producto of productos) {
-    const creado = await prisma.producto.create({
+    await prisma.producto.create({
       data: {
         nombre: producto.nombre,
         sku: producto.sku,
         categoriaId: idsCategorias[producto.categoria],
+        unidadStock: "UNIDAD",
         stockActual: producto.stock,
         stockMinimo: producto.minimo,
+        modalidades: {
+          create: {
+            nombre: "Unidad",
+            unidadVenta: "UNIDAD",
+            esBase: true,
+            reglas: {
+              create: [
+                {
+                  metodoPagoId: idsMetodosPago.EFECTIVO,
+                  cantidadDesde: 1,
+                  tipoPrecio: "UNITARIO",
+                  precio: producto.efectivo,
+                },
+                {
+                  metodoPagoId: idsMetodosPago.TRANSFERENCIA,
+                  cantidadDesde: 1,
+                  tipoPrecio: "UNITARIO",
+                  precio: producto.transferencia,
+                },
+              ],
+            },
+          },
+        },
       },
     });
-
-    const precios = [
-      { codigo: "EFECTIVO", precio: producto.efectivo },
-      { codigo: "TRANSFERENCIA", precio: producto.transferencia },
-    ];
-
-    for (const precio of precios) {
-      await prisma.precioProducto.create({
-        data: {
-          productoId: creado.id,
-          metodoPagoId: idsMetodosPago[precio.codigo],
-          precio: precio.precio,
-        },
-      });
-    }
   }
 }
 
@@ -178,7 +187,7 @@ async function sembrarPedidosDemo(): Promise<void> {
   const admin = await prisma.user.findFirstOrThrow({ where: { rol: "ADMIN" } });
   const productos = await prisma.producto.findMany({
     where: { sku: { in: ["BEB-COCA-225", "ALM-YERBA-1K", "LIM-DETER-750"] } },
-    include: { precios: true },
+    include: { modalidades: { include: { reglas: true } } },
   });
 
   if (productos.length === 0) return;
@@ -231,13 +240,14 @@ async function sembrarPedidosDemo(): Promise<void> {
   for (const datos of pedidos) {
     const items = datos.items.map((item) => {
       const producto = productos.find((p) => p.sku === item.sku);
-      const precio = producto?.precios[0]?.precio ?? 0;
-      const precioNumero = Number(precio);
+      const regla = producto?.modalidades[0]?.reglas[0];
+      const precioNumero = regla ? Number(regla.precio) : 0;
 
       return {
         productoId: producto?.id ?? "",
         nombreProducto: producto?.nombre ?? "",
         unidadVenta: "UNIDAD" as const,
+        modalidadNombre: "Unidad",
         precioUnitario: precioNumero,
         cantidad: item.cantidad,
         subtotal: precioNumero * item.cantidad,

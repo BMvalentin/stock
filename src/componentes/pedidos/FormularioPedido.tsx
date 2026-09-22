@@ -12,9 +12,12 @@ import type {
   LineaPedidoUI,
   ResumenPedidoCalculado,
 } from "@/tipos/pedidoFormulario";
-import type { ProductoParaPedido } from "@/servicios/productos/buscarProductosParaPedido";
+import type {
+  ModalidadParaPedido,
+  ProductoParaPedido,
+} from "@/servicios/productos/buscarProductosParaPedido";
 import type { MetodoPagoActivo } from "@/servicios/metodosPago/listarMetodosPagoActivos";
-import type { TipoEntrega, UnidadVenta } from "@/generated/prisma/enums";
+import type { TipoEntrega } from "@/generated/prisma/enums";
 import { SeccionFormulario } from "@/componentes/ui/SeccionFormulario";
 import { CampoTexto } from "@/componentes/ui/CampoTexto";
 import { CampoSelect } from "@/componentes/ui/CampoSelect";
@@ -43,9 +46,7 @@ export function FormularioPedido({
 
   const [tipoEntrega, setTipoEntrega] =
     useState<TipoEntrega>("ENVIO_DOMICILIO");
-  const [metodoPagoId, setMetodoPagoId] = useState(
-    metodosPago[0]?.id ?? "",
-  );
+  const [metodoPagoId, setMetodoPagoId] = useState(metodosPago[0]?.id ?? "");
   const [direccion, setDireccion] = useState("");
   const [localidad, setLocalidad] = useState("");
   const [mapsUrl, setMapsUrl] = useState("");
@@ -91,7 +92,7 @@ export function FormularioPedido({
         lineas.map((linea) => ({
           productoId: linea.productoId,
           cantidad: linea.cantidad,
-          modalidad: linea.modalidad,
+          modalidadId: linea.modalidadId,
         })),
         metodoPagoId,
         tipoEntrega,
@@ -119,12 +120,13 @@ export function FormularioPedido({
 
   function agregarProducto(
     producto: ProductoParaPedido,
-    modalidad: UnidadVenta,
+    modalidad: ModalidadParaPedido,
   ) {
     setLineas((actuales) => {
       const existente = actuales.find(
         (linea) =>
-          linea.productoId === producto.id && linea.modalidad === modalidad,
+          linea.productoId === producto.id &&
+          linea.modalidadId === modalidad.id,
       );
 
       if (existente) {
@@ -142,14 +144,14 @@ export function FormularioPedido({
           productoId: producto.id,
           nombre: producto.nombre,
           sku: producto.sku,
-          modalidad,
-          unidadVenta: producto.unidadVenta,
-          permiteVentaSuelta: producto.permiteVentaSuelta,
-          pesoPresentacionKg: producto.pesoPresentacionKg,
+          modalidadId: modalidad.id,
+          modalidadNombre: modalidad.nombre,
+          unidadVenta: modalidad.unidadVenta,
+          contenido: modalidad.contenido,
+          etiquetaPresentacion: modalidad.etiquetaPresentacion,
           cantidad: 1,
-          precios: producto.precios,
-          preciosSuelto: producto.preciosSuelto,
           stockActual: producto.stockActual,
+          unidadStock: producto.unidadStock,
         },
       ];
     });
@@ -166,40 +168,6 @@ export function FormularioPedido({
           : linea,
       ),
     );
-  }
-
-  function cambiarModalidad(id: string, modalidad: UnidadVenta) {
-    setLineas((actuales) => {
-      const linea = actuales.find((actual) => actual.id === id);
-      if (!linea) return actuales;
-
-      const otra = actuales.find(
-        (actual) =>
-          actual.id !== id &&
-          actual.productoId === linea.productoId &&
-          actual.modalidad === modalidad,
-      );
-
-      // Si el producto ya tiene una línea en esa modalidad, se quita la línea
-      // actual para no mezclar unidades (bolsas con kg).
-      if (otra) {
-        return actuales.filter((actual) => actual.id !== id);
-      }
-
-      return actuales.map((actual) =>
-        actual.id === id
-          ? {
-              ...actual,
-              modalidad,
-              // Al pasar a presentación la cantidad debe ser entera.
-              cantidad:
-                modalidad === "UNIDAD"
-                  ? Math.max(1, Math.floor(actual.cantidad))
-                  : actual.cantidad,
-            }
-          : actual,
-      );
-    });
   }
 
   function quitarProducto(id: string) {
@@ -321,11 +289,10 @@ export function FormularioPedido({
         ) : null}
         <LineasPedido
           lineas={lineas}
-          metodoPagoId={metodoPagoId}
+          resumen={resumen}
           moneda={moneda}
           locale={locale}
           onCambiarCantidad={cambiarCantidad}
-          onCambiarModalidad={cambiarModalidad}
           onQuitar={quitarProducto}
         />
       </SeccionFormulario>
@@ -369,7 +336,7 @@ export function FormularioPedido({
           lineas.map((linea) => ({
             productoId: linea.productoId,
             cantidad: linea.cantidad,
-            modalidad: linea.modalidad,
+            modalidadId: linea.modalidadId,
           })),
         )}
       />

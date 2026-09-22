@@ -33,6 +33,7 @@ export async function cambiarEstadoPedido(
             nombreProducto: true,
             unidadVenta: true,
             pesoPresentacionKg: true,
+            contenido: true,
           },
         },
       },
@@ -54,9 +55,8 @@ export async function cambiarEstadoPedido(
     if (nuevoEstado === "CONFIRMADO" && !pedido.stockDescontado) {
       for (const detalle of pedido.detalles) {
         const cantidadStock = calcularCantidadStockLinea(
-          detalle.unidadVenta,
+          detalle.contenido ?? detalle.pesoPresentacionKg,
           detalle.cantidad,
-          detalle.pesoPresentacionKg,
         );
 
         const producto = await tx.producto.findUnique({
@@ -116,9 +116,8 @@ export async function cambiarEstadoPedido(
     ) {
       for (const detalle of pedido.detalles) {
         const cantidadStock = calcularCantidadStockLinea(
-          detalle.unidadVenta,
+          detalle.contenido ?? detalle.pesoPresentacionKg,
           detalle.cantidad,
-          detalle.pesoPresentacionKg,
         );
 
         const producto = await tx.producto.findUnique({

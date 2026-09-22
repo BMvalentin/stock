@@ -18,7 +18,7 @@ export async function listarMetodosPago(): Promise<MetodoPagoListado[]> {
       nombre: true,
       activo: true,
       orden: true,
-      _count: { select: { precios: true } },
+      _count: { select: { reglasPrecio: true } },
     },
   });
 
@@ -28,6 +28,6 @@ export async function listarMetodosPago(): Promise<MetodoPagoListado[]> {
     nombre: metodo.nombre,
     activo: metodo.activo,
     orden: metodo.orden,
-    cantidadPrecios: metodo._count.precios,
+    cantidadPrecios: metodo._count.reglasPrecio,
   }));
 }

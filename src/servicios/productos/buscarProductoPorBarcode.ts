@@ -1,29 +1,13 @@
 import { prisma } from "@/lib/prisma/cliente";
-import type { PrecioListado } from "@/servicios/productos/listarProductos";
-import type { UnidadVenta } from "@/generated/prisma/enums";
+import type { ProductoParaPedido } from "@/servicios/productos/buscarProductosParaPedido";
 
-export type ProductoPorBarcode = {
-  id: string;
-  nombre: string;
-  sku: string | null;
-  barcode: string;
-  activo: boolean;
-  unidadVenta: UnidadVenta;
-  permiteVentaSuelta: boolean;
-  pesoPresentacionKg: number | null;
-  stockActual: number;
-  stockMinimo: number;
-  categoria: string;
-  imageUrl: string | null;
-  precios: PrecioListado[];
-  preciosSuelto: PrecioListado[];
-};
+export type { ProductoParaPedido as ProductoPorBarcode };
 
-// Búsqueda directa por código de barras (índice único). Devuelve solo los
-// campos necesarios para identificar el producto; nunca datos sensibles.
+// Búsqueda directa por código de barras (índice único). Devuelve el producto con
+// sus modalidades y reglas de precio; nunca datos sensibles.
 export async function buscarProductoPorBarcode(
   barcode: string,
-): Promise<ProductoPorBarcode | null> {
+): Promise<ProductoParaPedido | null> {
   const producto = await prisma.producto.findUnique({
     where: { barcode },
     select: {
@@ -32,60 +16,61 @@ export async function buscarProductoPorBarcode(
       sku: true,
       barcode: true,
       activo: true,
-      unidadVenta: true,
-      permiteVentaSuelta: true,
-      pesoPresentacionKg: true,
-      stockActual: true,
-      stockMinimo: true,
       imageUrl: true,
-      categoria: { select: { nombre: true } },
-      precios: {
-        select: {
-          metodoPagoId: true,
-          precio: true,
-          metodoPago: { select: { nombre: true, codigo: true } },
-        },
-      },
-      preciosSuelto: {
+      unidadStock: true,
+      stockActual: true,
+      modalidades: {
         where: { activo: true },
+        orderBy: [{ orden: "asc" }, { nombre: "asc" }],
         select: {
-          metodoPagoId: true,
-          precio: true,
-          metodoPago: { select: { nombre: true, codigo: true } },
+          id: true,
+          nombre: true,
+          unidadVenta: true,
+          contenido: true,
+          etiquetaPresentacion: true,
+          esBase: true,
+          reglas: {
+            where: { activo: true },
+            orderBy: [{ cantidadDesde: "asc" }, { precio: "asc" }],
+            select: {
+              metodoPagoId: true,
+              cantidadDesde: true,
+              cantidadHasta: true,
+              tipoPrecio: true,
+              precio: true,
+            },
+          },
         },
       },
     },
   });
 
-  if (!producto || !producto.barcode) return null;
+  if (!producto || !producto.barcode || !producto.activo) return null;
 
   return {
     id: producto.id,
     nombre: producto.nombre,
     sku: producto.sku,
     barcode: producto.barcode,
-    activo: producto.activo,
-    unidadVenta: producto.unidadVenta,
-    permiteVentaSuelta: producto.permiteVentaSuelta,
-    pesoPresentacionKg:
-      producto.pesoPresentacionKg === null
-        ? null
-        : Number(producto.pesoPresentacionKg),
-    stockActual: Number(producto.stockActual),
-    stockMinimo: Number(producto.stockMinimo),
-    categoria: producto.categoria.nombre,
     imageUrl: producto.imageUrl,
-    precios: producto.precios.map((precio) => ({
-      metodoPagoId: precio.metodoPagoId,
-      metodo: precio.metodoPago.nombre,
-      codigo: precio.metodoPago.codigo,
-      precio: Number(precio.precio),
-    })),
-    preciosSuelto: producto.preciosSuelto.map((precio) => ({
-      metodoPagoId: precio.metodoPagoId,
-      metodo: precio.metodoPago.nombre,
-      codigo: precio.metodoPago.codigo,
-      precio: Number(precio.precio),
+    unidadStock: producto.unidadStock,
+    stockActual: Number(producto.stockActual),
+    modalidades: producto.modalidades.map((modalidad) => ({
+      id: modalidad.id,
+      nombre: modalidad.nombre,
+      unidadVenta: modalidad.unidadVenta,
+      contenido:
+        modalidad.contenido === null ? null : Number(modalidad.contenido),
+      etiquetaPresentacion: modalidad.etiquetaPresentacion,
+      esBase: modalidad.esBase,
+      reglas: modalidad.reglas.map((regla) => ({
+        metodoPagoId: regla.metodoPagoId,
+        cantidadDesde: Number(regla.cantidadDesde),
+        cantidadHasta:
+          regla.cantidadHasta === null ? null : Number(regla.cantidadHasta),
+        tipoPrecio: regla.tipoPrecio,
+        precio: Number(regla.precio),
+      })),
     })),
   };
 }

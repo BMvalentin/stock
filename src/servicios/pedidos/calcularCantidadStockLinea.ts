@@ -1,18 +1,14 @@
 import { Prisma } from "@/generated/prisma/client";
-import type { UnidadVenta } from "@/generated/prisma/enums";
 
 // Cantidad de stock que consume una línea de pedido, expresada en la unidad de
-// stock del producto. Una venta por presentación (`UNIDAD`) con peso definido
-// descuenta `cantidad × pesoPresentacionKg` kilogramos; la venta suelta y los
-// productos sin presentación descuentan la cantidad tal cual.
+// stock del producto. `contenido` es lo que consume una unidad de la modalidad
+// (ej. 15 para una bolsa de 15 kg); null equivale a 1 (venta por unidad o
+// suelto por kg).
 export function calcularCantidadStockLinea(
-  unidadVenta: UnidadVenta,
+  contenido: Prisma.Decimal | null,
   cantidad: Prisma.Decimal,
-  pesoPresentacionKg: Prisma.Decimal | null,
 ): Prisma.Decimal {
-  if (unidadVenta === "UNIDAD" && pesoPresentacionKg !== null) {
-    return cantidad.mul(pesoPresentacionKg);
-  }
+  if (contenido === null) return cantidad;
 
-  return cantidad;
+  return cantidad.mul(contenido);
 }

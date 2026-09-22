@@ -19,24 +19,24 @@ export function ProductosPedido({
   locale: string;
 }) {
   const lineas = detalles.map((detalle) => {
-    const esBolsa =
-      detalle.pesoPresentacionKg !== null &&
-      detalle.unidadVenta === "UNIDAD";
+    const contenido = detalle.contenido ?? detalle.pesoPresentacionKg;
+    const esBolsa = contenido !== null && detalle.unidadVenta === "UNIDAD";
 
     return {
       id: detalle.id,
       productoId: detalle.productoId,
       nombreProducto: detalle.nombreProducto,
       modalidad: etiquetaModalidadLinea({
+        modalidadNombre: detalle.modalidadNombre,
         unidadVenta: detalle.unidadVenta,
+        contenido: detalle.contenido,
         pesoPresentacionKg: detalle.pesoPresentacionKg,
       }),
-      presentacion: esBolsa
-        ? ` · Presentación ${detalle.pesoPresentacionKg} kg`
-        : "",
+      presentacion: esBolsa ? ` · Presentación ${contenido} kg` : "",
       precio: `${formatearMoneda(detalle.precioUnitario, moneda, locale)} ${sufijoPrecioModalidadLinea(
         {
           unidadVenta: detalle.unidadVenta,
+          contenido: detalle.contenido,
           pesoPresentacionKg: detalle.pesoPresentacionKg,
         },
       )}`.trim(),

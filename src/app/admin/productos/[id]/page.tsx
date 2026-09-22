@@ -31,6 +31,40 @@ import { BotonEstadoProducto } from "@/componentes/productos/BotonEstadoProducto
 
 export const metadata = { title: "Detalle de producto" };
 
+function describirRegla(
+  regla: {
+    tipoPrecio: "UNITARIO" | "TOTAL";
+    cantidadDesde: number;
+    cantidadHasta: number | null;
+    precio: number;
+    metodoPagoNombre: string | null;
+  },
+  unidad: string,
+  moneda: string,
+  locale: string,
+): string {
+  const metodo = regla.metodoPagoNombre ? ` · ${regla.metodoPagoNombre}` : "";
+
+  if (regla.tipoPrecio === "TOTAL") {
+    return `${regla.cantidadDesde} ${unidad} por ${formatearMoneda(
+      regla.precio,
+      moneda,
+      locale,
+    )}${metodo}`;
+  }
+
+  const rango =
+    regla.cantidadHasta === null
+      ? `${regla.cantidadDesde}+`
+      : `${regla.cantidadDesde}–${regla.cantidadHasta}`;
+
+  return `${rango} ${unidad}: ${formatearMoneda(
+    regla.precio,
+    moneda,
+    locale,
+  )} c/u${metodo}`;
+}
+
 export default async function PaginaDetalleProducto({
   params,
 }: PageProps<"/admin/productos/[id]">) {
@@ -46,10 +80,15 @@ export default async function PaginaDetalleProducto({
 
   if (!producto) notFound();
 
+  const { moneda, locale } = configuracion;
   const estado = calcularEstadoStock(
     producto.stockActual,
     producto.stockMinimo,
   );
+  const modalidadBase = producto.modalidades.find(
+    (modalidad) => modalidad.esBase,
+  );
+  const esPeso = producto.unidadStock === "KILOGRAMO";
 
   return (
     <div className="space-y-6">
@@ -109,17 +148,14 @@ export default async function PaginaDetalleProducto({
             <Dato etiqueta="Categoría" valor={producto.categoria} />
             <Dato etiqueta="SKU" valor={producto.sku} />
             <Dato etiqueta="Código de barras" valor={producto.barcode} />
-            {producto.permiteVentaSuelta ? (
-              <Dato
-                etiqueta="Peso de la presentación"
-                valor={`${producto.pesoPresentacionKg ?? "—"} kg`}
-              />
-            ) : (
-              <Dato
-                etiqueta="Unidades por bulto"
-                valor={producto.unidadesPorBulto}
-              />
-            )}
+            <Dato
+              etiqueta="Unidad de stock"
+              valor={esPeso ? "Kilogramos" : "Unidades"}
+            />
+            <Dato
+              etiqueta="Unidades por bulto"
+              valor={producto.unidadesPorBulto}
+            />
             <Dato etiqueta="Descripción" valor={producto.descripcion} />
           </dl>
         </Tarjeta>
@@ -130,18 +166,17 @@ export default async function PaginaDetalleProducto({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-semibold text-zinc-900">
-                  {producto.permiteVentaSuelta
+                  {esPeso
                     ? formatearStockPresentacion(
                         producto.stockActual,
-                        producto.pesoPresentacionKg,
+                        modalidadBase?.contenido ?? null,
+                        locale,
                       )
                     : producto.stockActual}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  Mínimo:{" "}
-                  {producto.permiteVentaSuelta
-                    ? `${producto.stockMinimo} kg`
-                    : producto.stockMinimo}
+                  Mínimo: {producto.stockMinimo}
+                  {esPeso ? " kg" : ""}
                 </p>
               </div>
               <Etiqueta tono={TONOS_ESTADO_STOCK[estado]}>
@@ -160,74 +195,59 @@ export default async function PaginaDetalleProducto({
         </Tarjeta>
 
         <Tarjeta className="p-5">
-          <h2 className="text-sm font-semibold text-zinc-900">Venta</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-zinc-400">
-                {producto.unidadVenta === "KILOGRAMO"
-                  ? "Por kg"
-                  : producto.pesoPresentacionKg
-                    ? `Bolsa de ${producto.pesoPresentacionKg} kg`
-                    : "Por unidad"}
-              </dt>
-              <dd className="mt-1 space-y-1">
-                {producto.precios.length === 0 ? (
-                  <p className="text-zinc-500">Sin precios cargados.</p>
-                ) : (
-                  producto.precios.map((precio) => (
-                    <div
-                      key={precio.metodoPagoId}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-zinc-500">{precio.metodo}</span>
-                      <span className="font-medium text-zinc-900">
-                        {formatearMoneda(
-                          precio.precio,
-                          configuracion.moneda,
-                          configuracion.locale,
-                        )}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </dd>
-            </div>
+          <h2 className="text-sm font-semibold text-zinc-900">
+            Modalidades y precios
+          </h2>
+          {producto.modalidades.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-500">
+              Sin modalidades cargadas.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {producto.modalidades.map((modalidad) => {
+                const unidad =
+                  modalidad.unidadVenta === "KILOGRAMO" ? "kg" : "u.";
 
-            {producto.unidadVenta === "UNIDAD" ? (
-              <div className="border-t border-zinc-100 pt-3">
-                <dt className="text-xs uppercase tracking-wide text-zinc-400">
-                  Venta suelta
-                </dt>
-                <dd className="mt-1">
-                  {producto.permiteVentaSuelta &&
-                  producto.preciosSuelto.length > 0 ? (
-                    <div className="space-y-1">
-                      {producto.preciosSuelto.map((precio) => (
-                        <div
-                          key={precio.metodoPagoId}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-zinc-500">{precio.metodo}</span>
-                          <span className="font-medium text-zinc-900">
-                            {formatearMoneda(
-                              precio.precio,
-                              configuracion.moneda,
-                              configuracion.locale,
-                            )}{" "}
-                            <span className="font-normal text-zinc-400">
-                              / kg
-                            </span>
-                          </span>
-                        </div>
-                      ))}
+                return (
+                  <div key={modalidad.id}>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-zinc-900">
+                        {modalidad.nombre}
+                      </p>
+                      {modalidad.esBase ? (
+                        <Etiqueta tono="info">Principal</Etiqueta>
+                      ) : null}
                     </div>
-                  ) : (
-                    <span className="text-zinc-500">No disponible</span>
-                  )}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
+                    <p className="text-xs text-zinc-500">
+                      {modalidad.unidadVenta === "KILOGRAMO"
+                        ? "Por kg"
+                        : "Por unidad"}
+                      {modalidad.etiquetaPresentacion
+                        ? ` · ${modalidad.etiquetaPresentacion}`
+                        : ""}
+                      {modalidad.contenido !== null
+                        ? ` · descuenta ${modalidad.contenido} por unidad`
+                        : ""}
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {modalidad.reglas.length === 0 ? (
+                        <li className="text-xs text-zinc-400">Sin precios.</li>
+                      ) : (
+                        modalidad.reglas.map((regla) => (
+                          <li
+                            key={regla.id}
+                            className="text-xs text-zinc-600"
+                          >
+                            {describirRegla(regla, unidad, moneda, locale)}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Tarjeta>
       </div>
 
@@ -278,10 +298,7 @@ export default async function PaginaDetalleProducto({
               id: movimiento.id,
               celdas: [
                 <span key="fecha" className="whitespace-nowrap text-xs text-zinc-500">
-                  {formatearFechaHora(
-                    movimiento.createdAt,
-                    configuracion.locale,
-                  )}
+                  {formatearFechaHora(movimiento.createdAt, locale)}
                 </span>,
                 <Etiqueta
                   key="tipo"

@@ -3,31 +3,39 @@ import { Prisma } from "@/generated/prisma/client";
 import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
 import { unidadStockProducto } from "@/lib/utilidades/unidadStockProducto";
 import { calcularCantidadStockLinea } from "@/servicios/pedidos/calcularCantidadStockLinea";
+import {
+  calcularPrecioLinea,
+  type DesglosePrecio,
+  type ReglaPrecioResoluble,
+} from "@/servicios/precios/calcularPrecioLinea";
 import type { UnidadVenta } from "@/generated/prisma/enums";
 
 export type LineaPedidoEntrada = {
   productoId: string;
   cantidad: number;
-  // Modalidad elegida por el operador. Si falta, se usa la del producto. En un
-  // producto con venta suelta, `UNIDAD` es la presentación y `KILOGRAMO` el
-  // suelto.
-  modalidad?: UnidadVenta;
+  // Modalidad de venta elegida (bolsa, suelto, unidad...). Obligatoria.
+  modalidadId: string;
 };
 
 export type LineaCalculada = {
   productoId: string;
   nombreProducto: string;
-  // Modalidad vendida (se congela en el detalle del pedido).
+  modalidadId: string;
+  // Nombre de la modalidad vendida (se congela en el detalle del pedido).
+  modalidadNombre: string;
+  // Unidad en la que se vende (define el precio y la cantidad).
   unidadVenta: UnidadVenta;
   // Unidad en la que se lleva el stock (para mensajes y formateo).
   unidadStock: UnidadVenta;
-  // Peso de la presentación al momento de la venta (null si no aplica).
-  pesoPresentacionKg: Prisma.Decimal | null;
+  // Stock que consume una unidad de la modalidad (null = 1).
+  contenido: Prisma.Decimal | null;
   precioUnitario: Prisma.Decimal;
   cantidad: Prisma.Decimal;
   // Cantidad de stock que consume la línea, en la unidad de stock.
   cantidadStock: Prisma.Decimal;
   subtotal: Prisma.Decimal;
+  // Desglose de las reglas aplicadas (tramos/promociones).
+  desglose: DesglosePrecio;
   unidadesPorBulto: number;
   // Bultos equivalentes para el cálculo de envío POR_BULTO.
   bultos: Prisma.Decimal;
@@ -39,33 +47,45 @@ export type TotalesPedido = {
   subtotal: Prisma.Decimal;
 };
 
-// Resuelve el precio vigente de cada producto según el método de pago y la
-// modalidad elegida, y calcula los subtotales. El cliente nunca define precios:
-// solo envía producto, cantidad y modalidad. Valida la modalidad de venta
-// (entero en presentación, kg decimal en suelto) y que exista precio.
+// Resuelve el precio vigente de cada producto según la modalidad elegida y el
+// método de pago, y calcula los subtotales. El cliente nunca define precios:
+// solo envía producto, cantidad y modalidad. El motor de precios aplica las
+// escalas por cantidad y las promociones configuradas.
 export async function calcularTotalesPedido(
   lineas: LineaPedidoEntrada[],
   metodoPagoId: string,
 ): Promise<TotalesPedido> {
-  const ids = lineas.map((linea) => linea.productoId);
+  const ids = [...new Set(lineas.map((linea) => linea.productoId))];
 
   const productos = await prisma.producto.findMany({
     where: { id: { in: ids }, activo: true },
     select: {
       id: true,
       nombre: true,
-      unidadVenta: true,
-      permiteVentaSuelta: true,
-      pesoPresentacionKg: true,
+      unidadStock: true,
       unidadesPorBulto: true,
       stockActual: true,
-      precios: {
-        where: { metodoPagoId, activo: true },
-        select: { precio: true },
-      },
-      preciosSuelto: {
-        where: { metodoPagoId, activo: true },
-        select: { precio: true },
+      modalidades: {
+        where: { activo: true },
+        select: {
+          id: true,
+          nombre: true,
+          unidadVenta: true,
+          contenido: true,
+          esBase: true,
+          reglas: {
+            where: { activo: true },
+            select: {
+              id: true,
+              metodoPagoId: true,
+              cantidadDesde: true,
+              cantidadHasta: true,
+              tipoPrecio: true,
+              precio: true,
+              prioridad: true,
+            },
+          },
+        },
       },
     },
   });
@@ -82,22 +102,13 @@ export async function calcularTotalesPedido(
       );
     }
 
-    const modalidad = linea.modalidad ?? producto.unidadVenta;
-    const esVentaSuelta = modalidad !== producto.unidadVenta;
+    const modalidad = producto.modalidades.find(
+      (actual) => actual.id === linea.modalidadId,
+    );
 
-    if (esVentaSuelta && !producto.permiteVentaSuelta) {
+    if (!modalidad) {
       throw new ErrorNegocio(
-        `${producto.nombre} no admite venta suelta.`,
-      );
-    }
-
-    const precio = esVentaSuelta
-      ? producto.preciosSuelto[0]?.precio
-      : producto.precios[0]?.precio;
-
-    if (precio === undefined) {
-      throw new ErrorNegocio(
-        `No hay un precio configurado para ${producto.nombre} con el método de pago seleccionado.`,
+        `${producto.nombre} no tiene esa modalidad de venta.`,
       );
     }
 
@@ -107,40 +118,63 @@ export async function calcularTotalesPedido(
       throw new ErrorNegocio("La cantidad debe ser mayor a cero.");
     }
 
-    if (modalidad === "UNIDAD" && !cantidad.isInteger()) {
+    if (modalidad.unidadVenta === "UNIDAD" && !cantidad.isInteger()) {
       throw new ErrorNegocio(
         `${producto.nombre} se vende por unidad: la cantidad debe ser un número entero.`,
       );
     }
 
-    const pesoPresentacionKg =
-      producto.permiteVentaSuelta && producto.pesoPresentacionKg !== null
-        ? producto.pesoPresentacionKg
-        : null;
+    const reglas: ReglaPrecioResoluble[] = modalidad.reglas.map((regla) => ({
+      id: regla.id,
+      metodoPagoId: regla.metodoPagoId,
+      cantidadDesde: Number(regla.cantidadDesde),
+      cantidadHasta:
+        regla.cantidadHasta === null ? null : Number(regla.cantidadHasta),
+      tipoPrecio: regla.tipoPrecio,
+      precio: Number(regla.precio),
+      prioridad: regla.prioridad,
+    }));
 
-    const cantidadStock = calcularCantidadStockLinea(
-      modalidad,
-      cantidad,
-      pesoPresentacionKg,
+    const precio = calcularPrecioLinea(
+      reglas,
+      metodoPagoId,
+      cantidad.toNumber(),
     );
 
-    const bultos =
-      pesoPresentacionKg !== null
-        ? cantidadStock.div(pesoPresentacionKg)
-        : cantidad.div(producto.unidadesPorBulto);
+    if (!precio) {
+      throw new ErrorNegocio(
+        `No hay un precio configurado para ${producto.nombre} (${modalidad.nombre}) con el método de pago seleccionado.`,
+      );
+    }
 
-    const subtotal = precio.mul(cantidad).toDecimalPlaces(2);
+    const cantidadStock = calcularCantidadStockLinea(
+      modalidad.contenido,
+      cantidad,
+    );
+
+    const base =
+      producto.modalidades.find((actual) => actual.esBase) ??
+      producto.modalidades[0];
+    const contenidoBase = base?.contenido ?? null;
+
+    const bultos =
+      contenidoBase !== null && Number(contenidoBase) > 0
+        ? cantidadStock.div(contenidoBase)
+        : cantidad.div(producto.unidadesPorBulto);
 
     calculadas.push({
       productoId: producto.id,
       nombreProducto: producto.nombre,
-      unidadVenta: modalidad,
+      modalidadId: modalidad.id,
+      modalidadNombre: modalidad.nombre,
+      unidadVenta: modalidad.unidadVenta,
       unidadStock: unidadStockProducto(producto),
-      pesoPresentacionKg,
-      precioUnitario: precio,
+      contenido: modalidad.contenido,
+      precioUnitario: new Prisma.Decimal(precio.precioUnitario),
       cantidad,
       cantidadStock,
-      subtotal,
+      subtotal: new Prisma.Decimal(precio.subtotal),
+      desglose: precio.desglose,
       unidadesPorBulto: producto.unidadesPorBulto,
       bultos,
       stockActual: producto.stockActual,

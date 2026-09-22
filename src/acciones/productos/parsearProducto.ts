@@ -1,12 +1,10 @@
 import { z } from "zod";
 import {
-  esquemaPrecioProducto,
-  esquemaPrecioProductoSuelto,
+  esquemaModalidades,
   esquemaProducto,
   esquemaStockInicial,
 } from "@/lib/validaciones/productos";
 import { validarImagenProducto } from "@/lib/validaciones/imagenes";
-import { listarMetodosPagoActivos } from "@/servicios/metodosPago/listarMetodosPagoActivos";
 import type { DatosProducto } from "@/servicios/productos/crearProducto";
 
 export type ResultadoParseoProducto =
@@ -20,7 +18,8 @@ export type ResultadoParseoProducto =
   | { ok: false; errores: Record<string, string[]> };
 
 // Traduce el FormData del formulario de producto a los datos validados del
-// servicio. Compartido por las acciones de creación y edición.
+// servicio. Las modalidades y sus reglas de precio llegan serializadas en JSON
+// (campo `modalidades`). Compartido por las acciones de creación y edición.
 export async function parsearProducto(
   formData: FormData,
 ): Promise<ResultadoParseoProducto> {
@@ -30,15 +29,40 @@ export async function parsearProducto(
     sku: formData.get("sku") ?? "",
     barcode: formData.get("barcode") ?? "",
     categoriaId: formData.get("categoriaId"),
-    unidadVenta: formData.get("unidadVenta") ?? "UNIDAD",
-    permiteVentaSuelta: formData.get("permiteVentaSuelta") === "on",
-    pesoPresentacionKg: formData.get("pesoPresentacionKg"),
     stockMinimo: formData.get("stockMinimo"),
     unidadesPorBulto: formData.get("unidadesPorBulto"),
   });
 
   if (!resultado.success) {
     return { ok: false, errores: z.flattenError(resultado.error).fieldErrors };
+  }
+
+  const crudo = formData.get("modalidades");
+  let modalidadesCrudas: unknown = [];
+
+  if (typeof crudo === "string" && crudo.trim().length > 0) {
+    try {
+      modalidadesCrudas = JSON.parse(crudo);
+    } catch {
+      return {
+        ok: false,
+        errores: { modalidades: ["Los datos de modalidades son inválidos."] },
+      };
+    }
+  }
+
+  const modalidadesResultado = esquemaModalidades.safeParse(modalidadesCrudas);
+
+  if (!modalidadesResultado.success) {
+    return {
+      ok: false,
+      errores: {
+        modalidades: [
+          modalidadesResultado.error.issues[0]?.message ??
+            "Revisá las modalidades y precios.",
+        ],
+      },
+    };
   }
 
   const archivoCrudo = formData.get("imagen");
@@ -56,54 +80,6 @@ export async function parsearProducto(
   }
 
   const eliminarImagen = formData.get("imagenEliminar") === "1";
-
-  const metodos = await listarMetodosPagoActivos();
-  const precios: DatosProducto["precios"] = [];
-  const erroresPrecios: Record<string, string[]> = {};
-
-  for (const metodo of metodos) {
-    const parseo = esquemaPrecioProducto.safeParse({
-      metodoPagoId: metodo.id,
-      precio: formData.get(`precio_${metodo.id}`),
-    });
-
-    if (!parseo.success) {
-      erroresPrecios[`precio_${metodo.id}`] = ["Precio inválido"];
-      continue;
-    }
-
-    precios.push(parseo.data);
-  }
-
-  if (Object.keys(erroresPrecios).length > 0) {
-    return { ok: false, errores: erroresPrecios };
-  }
-
-  // Precios de venta suelta: solo se exigen si la modalidad está habilitada.
-  const preciosSuelto: DatosProducto["preciosSuelto"] = [];
-  const erroresPreciosSuelto: Record<string, string[]> = {};
-
-  if (resultado.data.permiteVentaSuelta) {
-    for (const metodo of metodos) {
-      const parseo = esquemaPrecioProductoSuelto.safeParse({
-        metodoPagoId: metodo.id,
-        precio: formData.get(`precioSuelto_${metodo.id}`),
-      });
-
-      if (!parseo.success) {
-        erroresPreciosSuelto[`precioSuelto_${metodo.id}`] = [
-          "Precio por kg inválido",
-        ];
-        continue;
-      }
-
-      preciosSuelto.push(parseo.data);
-    }
-
-    if (Object.keys(erroresPreciosSuelto).length > 0) {
-      return { ok: false, errores: erroresPreciosSuelto };
-    }
-  }
 
   const stock = esquemaStockInicial.safeParse(
     formData.get("stockInicial") ?? "0",
@@ -132,13 +108,9 @@ export async function parsearProducto(
       sku: resultado.data.sku ?? null,
       barcode: resultado.data.barcode,
       categoriaId: resultado.data.categoriaId,
-      unidadVenta: resultado.data.unidadVenta,
-      permiteVentaSuelta: resultado.data.permiteVentaSuelta,
-      pesoPresentacionKg: resultado.data.pesoPresentacionKg,
       stockMinimo: resultado.data.stockMinimo,
       unidadesPorBulto: resultado.data.unidadesPorBulto,
-      precios,
-      preciosSuelto,
+      modalidades: modalidadesResultado.data,
       proveedorIds,
       proveedorPrincipalId,
     },

@@ -2,18 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { Eye, ImageOff } from "lucide-react";
 import type { ProductoPorBarcode } from "@/servicios/productos/buscarProductoPorBarcode";
-import { calcularEstadoStock } from "@/servicios/stock/calcularEstadoStock";
-import {
-  ETIQUETAS_ESTADO_STOCK,
-  TONOS_ESTADO_STOCK,
-} from "@/constantes/estadoStock";
 import { TAMANO_MINIATURA_PRODUCTO } from "@/constantes/imagenes";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
+import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
 import { urlImagenCloudinary } from "@/lib/utilidades/urlImagenCloudinary";
 import { Etiqueta } from "@/componentes/ui/Etiqueta";
 
 // Resumen de un producto encontrado por código de barras. Presentación pura:
-// imagen, nombre, categoría, stock, estado, precios y acceso al detalle.
+// imagen, nombre, stock, modalidades con precios de referencia y acceso al
+// detalle.
 export function ResumenProductoBarcode({
   producto,
   moneda,
@@ -23,10 +20,9 @@ export function ResumenProductoBarcode({
   moneda: string;
   locale: string;
 }) {
-  const estado = calcularEstadoStock(
-    producto.stockActual,
-    producto.stockMinimo,
-  );
+  const modalidadBase =
+    producto.modalidades.find((modalidad) => modalidad.esBase) ??
+    producto.modalidades[0];
 
   return (
     <div className="flex gap-3 rounded-lg border border-zinc-200 bg-white p-3">
@@ -56,29 +52,38 @@ export function ResumenProductoBarcode({
           {producto.nombre}
         </Link>
         <p className="truncate text-xs text-zinc-500">
-          {producto.categoria}
-          {producto.sku ? ` · SKU ${producto.sku}` : ""}
+          {producto.sku ? `SKU ${producto.sku}` : "Sin SKU"}
         </p>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-600">
           <span>
-            Stock: {producto.stockActual} · Mín: {producto.stockMinimo}
+            Stock:{" "}
+            {producto.unidadStock === "KILOGRAMO"
+              ? formatearStockPresentacion(
+                  producto.stockActual,
+                  modalidadBase?.contenido ?? null,
+                  locale,
+                )
+              : producto.stockActual}
           </span>
-          <Etiqueta tono={TONOS_ESTADO_STOCK[estado]}>
-            {ETIQUETAS_ESTADO_STOCK[estado]}
-          </Etiqueta>
-          <Etiqueta tono={producto.activo ? "exito" : "neutral"}>
-            {producto.activo ? "Activo" : "Inactivo"}
-          </Etiqueta>
+          <Etiqueta tono="exito">Activo</Etiqueta>
         </div>
 
-        {producto.precios.length > 0 ? (
+        {producto.modalidades.length > 0 ? (
           <p className="truncate text-xs text-zinc-500">
-            {producto.precios
-              .map(
-                (precio) =>
-                  `${precio.metodo}: ${formatearMoneda(precio.precio, moneda, locale)}`,
-              )
+            {producto.modalidades
+              .map((modalidad) => {
+                const regla =
+                  modalidad.reglas.find(
+                    (actual) => actual.tipoPrecio === "UNITARIO",
+                  ) ?? modalidad.reglas[0];
+
+                return `${modalidad.nombre}: ${
+                  regla
+                    ? formatearMoneda(regla.precio, moneda, locale)
+                    : "sin precio"
+                }`;
+              })
               .join(" · ")}
           </p>
         ) : null}

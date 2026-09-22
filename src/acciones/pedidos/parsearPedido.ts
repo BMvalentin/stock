@@ -43,14 +43,14 @@ export function parsearPedido(formData: FormData): ResultadoParseoPedido {
   }
 
   // Consolida líneas repetidas sumando sus cantidades. La clave incluye la
-  // modalidad: un mismo producto puede venderse como presentación y suelto.
+  // modalidad: un mismo producto puede venderse en varias modalidades.
   const consolidadas = new Map<
     string,
-    { productoId: string; modalidad?: "UNIDAD" | "KILOGRAMO"; cantidad: number }
+    { productoId: string; modalidadId: string; cantidad: number }
   >();
 
   for (const linea of resultado.data.lineas) {
-    const clave = `${linea.productoId}::${linea.modalidad ?? ""}`;
+    const clave = `${linea.productoId}::${linea.modalidadId}`;
     const existente = consolidadas.get(clave);
 
     if (existente) {
@@ -60,7 +60,7 @@ export function parsearPedido(formData: FormData): ResultadoParseoPedido {
 
     consolidadas.set(clave, {
       productoId: linea.productoId,
-      modalidad: linea.modalidad,
+      modalidadId: linea.modalidadId,
       cantidad: linea.cantidad,
     });
   }

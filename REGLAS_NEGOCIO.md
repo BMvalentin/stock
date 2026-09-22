@@ -39,10 +39,11 @@ Reglas:
 - `stockActual` nunca puede quedar por debajo de 0. No se admite `stock = -1`.
 - `stockActual`, `stockMinimo`, las cantidades de `MovimientoStock` y las
   cantidades de pedido usan `Decimal(12,3)` para admitir venta por peso (kg).
-- Un producto con venta suelta lleva el stock en **kg**. Una venta por
-  presentación descuenta `cantidad × pesoPresentacionKg`; la venta suelta
-  descuenta los kg vendidos. La interfaz muestra además la equivalencia en
-  bolsas (ej. `60 kg · 4 bolsas`).
+- `Producto.unidadStock` define la unidad del stock (kg si hay una modalidad por
+  kg). Cada línea descuenta `cantidad × (modalidad.contenido ?? 1)` en esa
+  unidad; la interfaz muestra la equivalencia en presentaciones (ej.
+  `150 kg · 10 bolsas`). La venta suelta no crea un stock separado: comparte el
+  stock del producto.
 - El descuento por venta usa una actualización condicional
   (`stockActual >= cantidad`): dos pedidos concurrentes no pueden dejar stock
   negativo.
@@ -51,35 +52,39 @@ Reglas:
 
 ## Precios
 
-- Los precios viven en la tabla `PrecioProducto` (una fila por producto y método
-  de pago). No se hardcodean columnas como "precioEfectivo"/"precioTransferencia".
-- La modalidad de venta vive en `Producto.unidadVenta` (`UNIDAD` o `KILOGRAMO`) y
-  define cómo se interpreta el precio: por unidad/presentación o por kilogramo.
-  Es la modalidad base del producto; un producto con venta suelta puede venderse
-  además en la otra modalidad.
-- Métodos iniciales: `EFECTIVO`, `TRANSFERENCIA`. La tabla `MetodoPago` permite
-  agregar tarjeta, Mercado Pago, financiación, etc. sin migrar el esquema.
-- Al crear un pedido, el precio usado se **congela** en `DetallePedido.precioUnitario`.
-- Un pedido histórico **nunca** se recalcula con el precio actual del producto.
-- Cambiar un precio registra `PrecioProductoHistorial` (con `esSuelto` para
-  distinguir el precio suelto) y una entrada de auditoría.
+- Los precios se modelan como **modalidades de venta** (`ModalidadVenta`) con
+  **reglas de precio** (`ReglaPrecio`). No se hardcodean columnas como
+  `precioMayorista`, `precioSuelto` o `precio2Kg`.
+- Un producto puede tener **una o varias modalidades** (ej. "Bolsa 15 kg" y
+  "Suelto"). Cada modalidad define la unidad de venta (`UNIDAD`/`KILOGRAMO`) y,
+  opcionalmente, `contenido` (stock que consume una unidad) y una etiqueta de
+  presentación. Una modalidad se marca `esBase` para preseleccionarla.
+- `Producto.unidadStock` es la unidad canónica del stock: `KILOGRAMO` si alguna
+  modalidad es por kg; si no, `UNIDAD`.
+- Una **regla de precio** pertenece a una modalidad y define:
+  - `cantidadDesde`/`cantidadHasta` (rango; `null` = sin límite);
+  - `tipoPrecio`: `UNITARIO` (precio × cantidad) o `TOTAL` (conjunto de
+    `cantidadDesde` unidades por un precio total = promoción);
+  - `precio`;
+  - `metodoPagoId` opcional (`null` = aplica a cualquier método de pago).
+- **Escalas por cantidad**: reglas `UNITARIO` con rango (ej. 1-9 $2.000,
+  10-19 $1.800, 20+ $1.600).
+- **Promociones**: reglas `TOTAL` (ej. "2 kg por $5.000"). Se aplican en
+  **múltiplos completos** y el resto se cobra al precio unitario de la escala.
+  El sistema elige la combinación más barata (sin ambigüedad).
+- **Método de pago**: si existen reglas específicas del método elegido, se usan;
+  si no cubren la cantidad, se cae a las genéricas.
+- **Listas de precios / tipo de cliente**: no implementadas. El precio por
+  cantidad cubre el caso mayorista. El modelo admite agregar un `listaPreciosId`
+  a `ReglaPrecio` en el futuro sin rediseñar el motor.
+- Cambiar el precio de una regla registra `ReglaPrecioHistorial` y auditoría
+  `PRECIO_MODIFICADO`.
+- Al crear un pedido el precio se **congela** en `DetallePedido.precioUnitario`,
+  `DetallePedido.subtotal` y `DetallePedido.desglosePrecio`. Un pedido histórico
+  nunca se recalcula.
+- Las tablas `PrecioProducto`/`PrecioProductoSuelto` quedan como **legado** (la
+  app ya no las usa). La migración `0010` copió sus datos a modalidades y reglas.
 
-### Venta suelta por kilogramo
-
-- Un producto vendido por presentación (`unidadVenta = UNIDAD`) puede además
-  venderse suelto por kg. Se habilita con `Producto.permiteVentaSuelta`.
-- `Producto.pesoPresentacionKg` es el peso de la bolsa/bulto (ej. 15 kg). No
-  reemplaza a `unidadesPorBulto`, que es un conteo entero usado por el envío
-  `POR_BULTO`.
-- Los precios sueltos viven en `PrecioProductoSuelto` (una fila por producto y
-  método de pago). Es un precio **independiente**: nunca se calcula dividiendo
-  el precio de la bolsa por su peso.
-- El operador elige la modalidad al vender. Se congela en
-  `DetallePedido.unidadVenta` (`UNIDAD` = bolsa, `KILOGRAMO` = suelto) y el peso
-  de la presentación en `DetallePedido.pesoPresentacionKg`.
-- La venta suelta **no** crea un stock separado: comparte el stock del producto.
-- Un producto sin venta suelta mantiene exactamente su precio, su stock y su
-  modalidad anteriores.
 
 ## Pedidos
 
@@ -106,13 +111,14 @@ PENDIENTE → CONFIRMADO → PREPARANDO → LISTO → ENTREGADO
 - El cliente no define precios, subtotales ni total: envía producto y cantidad.
   El servidor resuelve el precio de `PrecioProducto` según el método de pago
   elegido (obligatorio) y calcula subtotales, envío y total.
-- Cada línea congela `nombreProducto`, `unidadVenta`, `pesoPresentacionKg`,
-  `precioUnitario`, `cantidad` y `subtotal` en `DetallePedido`.
-- Cantidades: por presentación/unidad deben ser enteras; por kilogramo admiten
-  hasta 3 decimales. Se rechazan cantidades cero o negativas.
+- Cada línea congela `nombreProducto`, `modalidadNombre`, `unidadVenta`,
+  `contenido`, `precioUnitario`, `cantidad`, `subtotal` y `desglosePrecio` en
+  `DetallePedido`.
+- Cantidades: por unidad deben ser enteras; por kilogramo admiten hasta 3
+  decimales. Se rechazan cantidades cero o negativas.
 - No se repite una modalidad: si se agrega dos veces el mismo producto y
-  modalidad, se suma la cantidad. Un producto con venta suelta puede aparecer a
-  la vez como bolsa y como suelto (líneas distintas).
+  modalidad, se suma la cantidad. Un producto puede aparecer a la vez como bolsa
+  y como suelto (modalidades distintas).
 - El envío se calcula con el servicio de envío (nunca en el componente). El
   retiro en el local no tiene costo.
 - Al crear se valida el stock disponible. El descuento real ocurre al confirmar
@@ -130,8 +136,8 @@ PENDIENTE → CONFIRMADO → PREPARANDO → LISTO → ENTREGADO
 ### Stock y pedidos
 
 - El stock se descuenta **al pasar el pedido a `CONFIRMADO`** (movimiento `VENTA`).
-  La cantidad descontada es la de stock de cada línea (kg para una presentación
-  con peso, cantidad directa en el resto).
+  La cantidad descontada es la de stock de cada línea (`cantidad × contenido`, en
+  `unidadStock`; `cantidad` directa si la modalidad no tiene contenido).
 - Al confirmar se marca `stockDescontado = true` para no descontar dos veces.
 - Al cancelar un pedido ya descontado se genera un movimiento `DEVOLUCION` y se
   marca `stockDevuelto = true`. No se devuelve stock dos veces.
@@ -157,9 +163,8 @@ Estados: `PENDIENTE`, `AVISADO`, `CONFIRMADO`, `RECHAZADO`.
   - `POR_BULTO`: envío = `precio × total de bultos`.
 - v1: `1 producto = 1 bulto`. `Producto.unidadesPorBulto` (default 1) permite
   evolucionar a "1 bulto cada N unidades" sin migrar el esquema.
-- En un producto con venta suelta, los bultos se calculan con
-  `pesoPresentacionKg`: una bolsa cuenta 1 bulto y una venta suelta la fracción
-  de bolsa que consume.
+- Los bultos se calculan con el `contenido` de la modalidad base: una bolsa
+  cuenta 1 bulto y una venta suelta la fracción de bolsa que consume.
 - El costo de envío se congela en `Pedido.costoEnvio` al crear/editar el pedido.
 
 ## Proveedores

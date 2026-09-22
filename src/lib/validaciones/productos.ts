@@ -40,73 +40,130 @@ const skuOpcional = z
   .optional()
   .transform((valor) => (valor ? valor : undefined));
 
-// Peso de la presentación en kg. Es opcional en general, pero obligatorio
-// cuando el producto permite venta suelta (se valida en `superRefine`).
-const pesoPresentacionOpcional = z.preprocess(
-  (valor) => (valor === "" || valor === null ? undefined : valor),
+// Número opcional que admite "" o null como ausencia de valor.
+const numeroOpcionalPositivo = z.preprocess(
+  (valor) => (valor === "" || valor === undefined || valor === null ? null : valor),
   z.coerce
     .number()
     .positive("Debe ser mayor a cero")
     .refine(tieneMaximoTresDecimales, "Máximo 3 decimales")
-    .optional(),
+    .nullable(),
 );
 
-export const esquemaProducto = z
+// Una regla de precio de una modalidad. `UNITARIO` cubre un rango de cantidad;
+// `TOTAL` representa un pack de `cantidadDesde` unidades por un precio total.
+export const esquemaReglaPrecio = z
   .object({
-    barcode: barcodeOpcional,
-    nombre: z
+    id: z.string().optional(),
+    metodoPagoId: z
       .string()
-      .trim()
-      .min(1, "El nombre es obligatorio")
-      .max(150, "Máximo 150 caracteres"),
-    descripcion: descripcionOpcional,
-    sku: skuOpcional,
-    categoriaId: z.string().min(1, "Seleccioná una categoría"),
-    unidadVenta: z.enum(["UNIDAD", "KILOGRAMO"], {
-      message: "Modalidad de venta inválida",
-    }),
-    permiteVentaSuelta: z.boolean().default(false),
-    pesoPresentacionKg: pesoPresentacionOpcional,
-    stockMinimo: z.coerce
+      .min(1)
+      .nullable()
+      .optional()
+      .transform((valor) => valor ?? null),
+    cantidadDesde: z.coerce
       .number()
-      .min(0, "No puede ser negativo")
+      .positive("Debe ser mayor a cero")
       .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
-    unidadesPorBulto: z.coerce
-      .number()
-      .int("Debe ser un número entero")
-      .min(1, "El mínimo es 1"),
+    cantidadHasta: numeroOpcionalPositivo,
+    tipoPrecio: z.enum(["UNITARIO", "TOTAL"], {
+      message: "Tipo de precio inválido",
+    }),
+    precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
+    activo: z.boolean().default(true),
   })
-  .superRefine((datos, ctx) => {
-    if (!datos.permiteVentaSuelta) return;
-
-    if (datos.unidadVenta !== "UNIDAD") {
+  .superRefine((regla, ctx) => {
+    if (
+      regla.tipoPrecio === "UNITARIO" &&
+      regla.cantidadHasta !== null &&
+      regla.cantidadHasta < regla.cantidadDesde
+    ) {
       ctx.addIssue({
         code: "custom",
-        path: ["permiteVentaSuelta"],
-        message:
-          "La venta suelta solo aplica a productos vendidos por unidad o presentación.",
+        path: ["cantidadHasta"],
+        message: "El máximo no puede ser menor al mínimo",
       });
     }
 
-    if (datos.pesoPresentacionKg === undefined) {
+    if (regla.tipoPrecio === "TOTAL" && regla.precio <= 0) {
       ctx.addIssue({
         code: "custom",
-        path: ["pesoPresentacionKg"],
-        message: "Indicá el peso de la presentación para la venta suelta.",
+        path: ["precio"],
+        message: "El precio del conjunto debe ser mayor a cero",
       });
     }
   });
 
-export const esquemaPrecioProducto = z.object({
-  metodoPagoId: z.string().min(1),
-  precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
+export const esquemaModalidadVenta = z.object({
+  id: z.string().optional(),
+  nombre: z
+    .string()
+    .trim()
+    .min(1, "Poné un nombre a la modalidad")
+    .max(80, "Máximo 80 caracteres"),
+  unidadVenta: z.enum(["UNIDAD", "KILOGRAMO"], {
+    message: "Unidad de venta inválida",
+  }),
+  contenido: numeroOpcionalPositivo,
+  etiquetaPresentacion: z.preprocess(
+    (valor) => (valor === "" || valor === undefined ? null : valor),
+    z.string().trim().max(50, "Máximo 50 caracteres").nullable(),
+  ),
+  esBase: z.boolean().default(false),
+  activo: z.boolean().default(true),
+  orden: z.coerce.number().int().min(0).default(0),
+  reglas: z
+    .array(esquemaReglaPrecio)
+    .min(1, "Cada modalidad necesita al menos un precio"),
 });
 
-// Precio de venta suelta por kg: obligatorio y mayor a cero cuando la venta
-// suelta está habilitada.
-export const esquemaPrecioProductoSuelto = z.object({
-  metodoPagoId: z.string().min(1),
-  precio: z.coerce.number().positive("El precio por kg debe ser mayor a cero"),
+export const esquemaModalidades = z
+  .array(esquemaModalidadVenta)
+  .min(1, "Agregá al menos una modalidad de venta")
+  .superRefine((modalidades, ctx) => {
+    const nombres = new Set<string>();
+
+    modalidades.forEach((modalidad, indice) => {
+      const clave = modalidad.nombre.toLowerCase();
+
+      if (nombres.has(clave)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [indice, "nombre"],
+          message: "Nombre de modalidad repetido",
+        });
+      }
+
+      nombres.add(clave);
+    });
+
+    if (!modalidades.some((modalidad) => modalidad.esBase)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [0, "esBase"],
+        message: "Marcá una modalidad como principal",
+      });
+    }
+  });
+
+export const esquemaProducto = z.object({
+  barcode: barcodeOpcional,
+  nombre: z
+    .string()
+    .trim()
+    .min(1, "El nombre es obligatorio")
+    .max(150, "Máximo 150 caracteres"),
+  descripcion: descripcionOpcional,
+  sku: skuOpcional,
+  categoriaId: z.string().min(1, "Seleccioná una categoría"),
+  stockMinimo: z.coerce
+    .number()
+    .min(0, "No puede ser negativo")
+    .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
+  unidadesPorBulto: z.coerce
+    .number()
+    .int("Debe ser un número entero")
+    .min(1, "El mínimo es 1"),
 });
 
 export const esquemaStockInicial = z.coerce

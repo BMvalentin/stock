@@ -1,12 +1,15 @@
 import type { UnidadVenta } from "@/generated/prisma/enums";
 
-// Sufijo del precio unitario según la modalidad vendida. La venta suelta y los
-// productos por kg usan "/ kg"; la presentación con peso usa "/ bolsa" y el
-// resto "/ unidad".
+// Sufijo del precio unitario según la modalidad vendida. La venta por kg usa
+// "/ kg"; una presentación con contenido usa "/ bolsa" y el resto "/ unidad".
 export function sufijoPrecioModalidadLinea(linea: {
   unidadVenta: UnidadVenta;
-  pesoPresentacionKg: number | null;
+  contenido?: number | null;
+  pesoPresentacionKg?: number | null;
 }): string {
   if (linea.unidadVenta === "KILOGRAMO") return "/ kg";
-  return linea.pesoPresentacionKg !== null ? "/ bolsa" : "/ unidad";
+
+  const presentacion = linea.contenido ?? linea.pesoPresentacionKg ?? null;
+
+  return presentacion !== null ? "/ bolsa" : "/ unidad";
 }

@@ -53,6 +53,11 @@ Estado: `RESUELTA` (ya implementada o acordada), `PENDIENTE` (requiere decisión
 | 46 | ¿La corrección manual puede alterar una liquidación cerrada? | No. Una asistencia incluida en una liquidación `CALCULADA`, `PAGADA` o `CANCELADA` no se edita sin anular antes la liquidación. |
 | 47 | ¿Cómo se organizan las rutas internas y el acceso por rol? | Todo el panel vive bajo `/admin/*`. El EMPLEADO accede en solo lectura a dashboard, productos, proveedores, stock, pedidos y su propio fichaje; el resto de `/admin/*` es solo ADMIN (route group `(soloAdmin)` + `requerirAdmin`). Se mantienen redirects temporales desde las rutas anteriores. |
 | 48 | ¿Un producto puede venderse por bolsa y suelto por kg a la vez? | Sí, en un único producto. `Producto.permiteVentaSuelta` + `pesoPresentacionKg`; el precio suelto por kg vive en `PrecioProductoSuelto` (independiente del precio de la bolsa). El stock se lleva en kg y la UI muestra la equivalencia en bolsas. La modalidad vendida se congela en `DetallePedido.unidadVenta` y `pesoPresentacionKg`. |
+| 49 | ¿Cómo se modelan precios flexibles (modalidades, escalas y promociones)? | `ModalidadVenta` (una o varias por producto) + `ReglaPrecio` (rango `cantidadDesde`/`cantidadHasta`, `tipoPrecio` `UNITARIO`/`TOTAL`, `metodoPagoId` opcional). Reemplaza a `PrecioProducto`/`PrecioProductoSuelto`. Migración `0010` no destructiva. |
+| 50 | ¿Cómo funcionan las escalas por cantidad y las promociones? | Escalas = reglas `UNITARIO` con rango (1-9, 10-19, 20+). Promociones = reglas `TOTAL` (ej. "2 kg por $5.000"), aplicadas en múltiplos completos + resto unitario, eligiendo la combinación más barata. |
+| 51 | ¿Listas de precios o tipo de cliente? | No por ahora. El precio por cantidad cubre el caso mayorista. El modelo admite agregar `listaPreciosId` a `ReglaPrecio` sin rediseñar el motor. |
+| 52 | ¿Cómo se lleva el stock de un producto vendido por bolsa y suelto? | Un único stock en `Producto.unidadStock` (kg si hay modalidad por kg). Cada modalidad descuenta `cantidad × contenido`; la UI muestra la equivalencia en presentaciones. |
+| 53 | ¿Se conservan los precios y las tablas anteriores? | Sí. `PrecioProducto`/`PrecioProductoSuelto` quedan como legado (la app no las usa) y la migración `0010` copió sus datos a modalidades y reglas, sin borrar productos, pedidos ni historial. |
 
 ## Pendientes
 

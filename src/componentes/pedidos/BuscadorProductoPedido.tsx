@@ -4,29 +4,47 @@ import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { accionBuscarProductosPedido } from "@/acciones/pedidos/accionBuscarProductosPedido";
 import { accionBuscarProductoPorBarcode } from "@/acciones/productos/accionBuscarProductoPorBarcode";
-import type { ProductoParaPedido } from "@/servicios/productos/buscarProductosParaPedido";
-import {
-  ETIQUETAS_UNIDAD_VENTA,
-  SUFIJOS_PRECIO_UNIDAD_VENTA,
-} from "@/constantes/unidadesVenta";
+import type {
+  ModalidadParaPedido,
+  ProductoParaPedido,
+} from "@/servicios/productos/buscarProductosParaPedido";
+import { calcularPrecioLinea } from "@/servicios/precios/calcularPrecioLinea";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
 import { formatearStockPresentacion } from "@/lib/utilidades/formatearStockPresentacion";
-import type { UnidadVenta } from "@/generated/prisma/enums";
 import { CampoTexto } from "@/componentes/ui/CampoTexto";
 import { Boton } from "@/componentes/ui/Boton";
 import { Alerta } from "@/componentes/ui/Alerta";
 import { BotonEscanear } from "@/componentes/codigosBarras/BotonEscanear";
 
+// Precio unitario de referencia (cantidad 1) para mostrar antes de armar el
+// pedido. El servidor recalcula el precio real según la cantidad.
+function precioReferencia(
+  modalidad: ModalidadParaPedido,
+  metodoPagoId: string,
+): number | null {
+  const reglas = modalidad.reglas.map((regla, indice) => ({
+    id: String(indice),
+    ...regla,
+    prioridad: 0,
+  }));
+  const resultado = calcularPrecioLinea(reglas, metodoPagoId, 1);
+
+  return resultado ? resultado.precioUnitario : null;
+}
+
 // Buscador de productos para agregar al pedido. Busca por nombre, SKU o código
-// de barras y reutiliza el escáner existente. No conoce precios finales: solo
-// muestra el precio de referencia del método elegido.
+// de barras y reutiliza el escáner existente. Muestra el precio de referencia de
+// cada modalidad con el método elegido.
 export function BuscadorProductoPedido({
   onSeleccionar,
   metodoPagoId,
   moneda,
   locale,
 }: {
-  onSeleccionar: (producto: ProductoParaPedido, modalidad: UnidadVenta) => void;
+  onSeleccionar: (
+    producto: ProductoParaPedido,
+    modalidad: ModalidadParaPedido,
+  ) => void;
   metodoPagoId: string;
   moneda: string;
   locale: string;
@@ -80,28 +98,22 @@ export function BuscadorProductoPedido({
       return;
     }
 
-    const producto = respuesta.producto;
-    onSeleccionar(
-      {
-        id: producto.id,
-        nombre: producto.nombre,
-        sku: producto.sku,
-        barcode: producto.barcode,
-        unidadVenta: producto.unidadVenta,
-        permiteVentaSuelta: producto.permiteVentaSuelta,
-        pesoPresentacionKg: producto.pesoPresentacionKg,
-        stockActual: producto.stockActual,
-        precios: producto.precios,
-        preciosSuelto: producto.preciosSuelto,
-      },
-      producto.unidadVenta,
-    );
+    const base =
+      respuesta.producto.modalidades.find((modalidad) => modalidad.esBase) ??
+      respuesta.producto.modalidades[0];
+
+    if (!base) {
+      setAviso("El producto no tiene modalidades de venta configuradas.");
+      return;
+    }
+
+    onSeleccionar(respuesta.producto, base);
     setTermino("");
     setResultados([]);
     setAviso(null);
   }
 
-  function agregar(producto: ProductoParaPedido, modalidad: UnidadVenta) {
+  function agregar(producto: ProductoParaPedido, modalidad: ModalidadParaPedido) {
     onSeleccionar(producto, modalidad);
     setTermino("");
     setResultados([]);
@@ -132,69 +144,50 @@ export function BuscadorProductoPedido({
       {resultados.length > 0 ? (
         <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200">
           {resultados.map((producto) => {
-            const precio = producto.precios.find(
-              (actual) => actual.metodoPagoId === metodoPagoId,
-            );
-            const precioSuelto = producto.preciosSuelto.find(
-              (actual) => actual.metodoPagoId === metodoPagoId,
-            );
+            const base =
+              producto.modalidades.find((modalidad) => modalidad.esBase) ??
+              producto.modalidades[0];
 
             return (
               <li
                 key={producto.id}
-                className="flex items-center justify-between gap-3 px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-zinc-900">
                     {producto.nombre}
                   </p>
                   <p className="truncate text-xs text-zinc-500">
-                    {ETIQUETAS_UNIDAD_VENTA[producto.unidadVenta]}
-                    {producto.sku ? ` · SKU ${producto.sku}` : ""} · Stock{" "}
-                    {producto.permiteVentaSuelta
+                    {producto.sku ? `SKU ${producto.sku} · ` : ""}Stock{" "}
+                    {producto.unidadStock === "KILOGRAMO"
                       ? formatearStockPresentacion(
                           producto.stockActual,
-                          producto.pesoPresentacionKg,
+                          base?.contenido ?? null,
                         )
                       : producto.stockActual}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  <span className="text-sm text-zinc-700">
-                    {precio
-                      ? `${formatearMoneda(precio.precio, moneda, locale)} ${
-                          SUFIJOS_PRECIO_UNIDAD_VENTA[producto.unidadVenta]
-                        }`
-                      : "Sin precio"}
-                  </span>
-                  <Boton
-                    variante="secundario"
-                    tamano="sm"
-                    onClick={() => agregar(producto, producto.unidadVenta)}
-                  >
-                    <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-                    {producto.permiteVentaSuelta &&
-                    producto.pesoPresentacionKg
-                      ? `Bolsa ${producto.pesoPresentacionKg} kg`
-                      : "Agregar"}
-                  </Boton>
-                  {producto.permiteVentaSuelta ? (
-                    <Boton
-                      variante="secundario"
-                      tamano="sm"
-                      onClick={() => agregar(producto, "KILOGRAMO")}
-                      disabled={!precioSuelto}
-                    >
-                      <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-                      {precioSuelto
-                        ? `Suelto ${formatearMoneda(
-                            precioSuelto.precio,
-                            moneda,
-                            locale,
-                          )}/kg`
-                        : "Suelto sin precio"}
-                    </Boton>
-                  ) : null}
+                  {producto.modalidades.map((modalidad) => {
+                    const precio = precioReferencia(modalidad, metodoPagoId);
+
+                    return (
+                      <Boton
+                        key={modalidad.id}
+                        variante="secundario"
+                        tamano="sm"
+                        onClick={() => agregar(producto, modalidad)}
+                      >
+                        <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                        {modalidad.nombre}
+                        {precio !== null
+                          ? ` · ${formatearMoneda(precio, moneda, locale)}${
+                              modalidad.unidadVenta === "KILOGRAMO" ? "/kg" : ""
+                            }`
+                          : " · sin precio"}
+                      </Boton>
+                    );
+                  })}
                 </div>
               </li>
             );
