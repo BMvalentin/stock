@@ -37,7 +37,6 @@ export type ProductoListado = {
   categoria: string;
   imageUrl: string | null;
   modalidades: ModalidadListado[];
-  cantidadProveedores: number;
 };
 
 export type ResultadoProductos = {
@@ -150,7 +149,6 @@ export async function listarProductos(
             },
           },
         },
-        _count: { select: { proveedores: true } },
       },
     }),
   ]);
@@ -178,7 +176,6 @@ export async function listarProductos(
         esBase: modalidad.esBase,
         precio: precioReferencia(modalidad.reglas),
       })),
-      cantidadProveedores: producto._count.proveedores,
     })),
   };
 }

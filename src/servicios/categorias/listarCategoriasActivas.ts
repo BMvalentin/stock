@@ -1,7 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma/cliente";
 import type { OpcionCampo } from "@/componentes/ui/CampoSelect";
 
-export async function listarCategoriasActivas(): Promise<OpcionCampo[]> {
+// Categorías activas para selects. Dato de cambio infrecuente: se cachea por
+// peticiones. Las acciones de categoría invalidan la etiqueta `categorias`.
+async function leerCategoriasActivas(): Promise<OpcionCampo[]> {
   const categorias = await prisma.categoria.findMany({
     where: { activo: true },
     orderBy: { nombre: "asc" },
@@ -13,4 +16,14 @@ export async function listarCategoriasActivas(): Promise<OpcionCampo[]> {
     valor: categoria.id,
     etiqueta: categoria.nombre,
   }));
+}
+
+const listarCategoriasActivasEnCache = unstable_cache(
+  leerCategoriasActivas,
+  ["categorias-activas"],
+  { tags: ["categorias"] },
+);
+
+export async function listarCategoriasActivas(): Promise<OpcionCampo[]> {
+  return listarCategoriasActivasEnCache();
 }

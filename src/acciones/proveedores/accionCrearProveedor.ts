@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { esquemaProveedor } from "@/lib/validaciones/proveedores";
@@ -37,5 +37,6 @@ export async function accionCrearProveedor(
   }
 
   revalidatePath("/admin/proveedores");
+  revalidateTag("proveedores", { expire: 0 });
   return { exito: true, mensaje: "Proveedor creado." };
 }

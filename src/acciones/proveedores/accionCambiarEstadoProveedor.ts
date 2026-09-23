@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { cambiarEstadoProveedor } from "@/servicios/proveedores/cambiarEstadoProveedor";
 import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
@@ -20,5 +20,6 @@ export async function accionCambiarEstadoProveedor(
 
   revalidatePath("/admin/proveedores");
   revalidatePath(`/admin/proveedores/${id}`);
+  revalidateTag("proveedores", { expire: 0 });
   return {};
 }

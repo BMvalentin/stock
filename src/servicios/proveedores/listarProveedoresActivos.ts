@@ -1,7 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma/cliente";
 import type { OpcionCampo } from "@/componentes/ui/CampoSelect";
 
-export async function listarProveedoresActivos(): Promise<OpcionCampo[]> {
+// Proveedores activos para selects. Dato de cambio infrecuente: se cachea por
+// peticiones. Las acciones de proveedor invalidan la etiqueta `proveedores`.
+async function leerProveedoresActivos(): Promise<OpcionCampo[]> {
   const proveedores = await prisma.proveedor.findMany({
     where: { activo: true },
     orderBy: { nombre: "asc" },
@@ -13,4 +16,14 @@ export async function listarProveedoresActivos(): Promise<OpcionCampo[]> {
     valor: proveedor.id,
     etiqueta: proveedor.nombre,
   }));
+}
+
+const listarProveedoresActivosEnCache = unstable_cache(
+  leerProveedoresActivos,
+  ["proveedores-activos"],
+  { tags: ["proveedores"] },
+);
+
+export async function listarProveedoresActivos(): Promise<OpcionCampo[]> {
+  return listarProveedoresActivosEnCache();
 }

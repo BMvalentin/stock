@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { esquemaCategoria } from "@/lib/validaciones/categorias";
@@ -33,5 +33,6 @@ export async function accionActualizarCategoria(
 
   revalidatePath("/admin/categorias");
   revalidatePath("/admin/productos");
+  revalidateTag("categorias", { expire: 0 });
   return { exito: true, mensaje: "Categoría actualizada." };
 }

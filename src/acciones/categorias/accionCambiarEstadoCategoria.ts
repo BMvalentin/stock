@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { cambiarEstadoCategoria } from "@/servicios/categorias/cambiarEstadoCategoria";
 import { ErrorNegocio } from "@/lib/errores/ErrorNegocio";
@@ -20,5 +20,6 @@ export async function accionCambiarEstadoCategoria(
 
   revalidatePath("/admin/categorias");
   revalidatePath("/admin/productos");
+  revalidateTag("categorias", { expire: 0 });
   return {};
 }

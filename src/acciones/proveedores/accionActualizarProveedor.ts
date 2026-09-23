@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { esquemaProveedor } from "@/lib/validaciones/proveedores";
@@ -39,5 +39,6 @@ export async function accionActualizarProveedor(
 
   revalidatePath("/admin/proveedores");
   revalidatePath(`/admin/proveedores/${id}`);
+  revalidateTag("proveedores", { expire: 0 });
   return { exito: true, mensaje: "Proveedor actualizado." };
 }

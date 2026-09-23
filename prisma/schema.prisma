@@ -177,6 +177,8 @@ model Producto {
   @@index([nombre])
   @@index([stockActual])
   @@index([activo])
+  // Orden del listado por "más recientes" (createdAt desc).
+  @@index([createdAt])
 }
 
 // ============================================================

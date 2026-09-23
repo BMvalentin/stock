@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { esquemaConfiguracionGeneral } from "@/lib/validaciones/configuracion";
@@ -33,5 +33,6 @@ export async function accionActualizarConfiguracionGeneral(
 
   revalidatePath("/admin/configuracion");
   revalidatePath("/admin");
+  revalidateTag("configuracion", { expire: 0 });
   return { exito: true, mensaje: "Configuración general actualizada." };
 }
