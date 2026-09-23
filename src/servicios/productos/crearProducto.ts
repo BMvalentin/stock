@@ -5,6 +5,7 @@ import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
 import { guardarModalidadesProducto } from "@/servicios/productos/guardarModalidadesProducto";
 import { derivarUnidadStock } from "@/lib/utilidades/derivarUnidadStock";
+import { filtrarSkuDuplicado } from "@/servicios/productos/filtrarSkuDuplicado";
 import type { ModalidadEntrada } from "@/tipos/producto";
 
 export type DatosProducto = {
@@ -28,9 +29,11 @@ export async function crearProducto(
   datos: DatosProducto & { stockInicial: number },
   usuarioId: string,
 ): Promise<{ id: string }> {
-  if (datos.sku) {
-    const skuExistente = await prisma.producto.findUnique({
-      where: { sku: datos.sku },
+  const filtroSku = filtrarSkuDuplicado(datos.sku);
+
+  if (filtroSku) {
+    const skuExistente = await prisma.producto.findFirst({
+      where: filtroSku,
       select: { id: true },
     });
 

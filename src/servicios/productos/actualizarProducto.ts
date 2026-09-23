@@ -5,6 +5,7 @@ import { registrarAuditoria } from "@/servicios/auditoria/registrarAuditoria";
 import { ACCIONES_AUDITORIA } from "@/constantes/accionesAuditoria";
 import { guardarModalidadesProducto } from "@/servicios/productos/guardarModalidadesProducto";
 import { derivarUnidadStock } from "@/lib/utilidades/derivarUnidadStock";
+import { filtrarSkuDuplicado } from "@/servicios/productos/filtrarSkuDuplicado";
 import type { DatosProducto } from "@/servicios/productos/crearProducto";
 
 // Operación de imagen solicitada al editar un producto. `mantener` no toca la
@@ -37,9 +38,11 @@ export async function actualizarProducto(
     throw new ErrorNegocio("El producto no existe.");
   }
 
-  if (datos.sku) {
+  const filtroSku = filtrarSkuDuplicado(datos.sku, id);
+
+  if (filtroSku) {
     const skuDuplicado = await prisma.producto.findFirst({
-      where: { sku: datos.sku, NOT: { id } },
+      where: filtroSku,
       select: { id: true },
     });
 
