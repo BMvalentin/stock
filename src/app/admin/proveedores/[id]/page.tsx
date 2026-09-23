@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requerirSesion } from "@/lib/seguridad/requerirSesion";
+import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { obtenerProveedor } from "@/servicios/proveedores/obtenerProveedor";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
 import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
@@ -10,7 +10,7 @@ export const metadata = { title: "Detalle de proveedor" };
 export default async function PaginaDetalleProveedor({
   params,
 }: PageProps<"/admin/proveedores/[id]">) {
-  const usuario = await requerirSesion();
+  const usuario = await requerirAdmin();
   const { id } = await params;
   const proveedor = await obtenerProveedor(id, usuario.rol === "ADMIN");
 

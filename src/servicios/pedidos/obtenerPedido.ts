@@ -60,7 +60,10 @@ export type PedidoDetalle = {
 
 export async function obtenerPedido(
   id: string,
+  opciones: { incluirObservaciones?: boolean } = {},
 ): Promise<PedidoDetalle | null> {
+  const incluirObservaciones = opciones.incluirObservaciones ?? true;
+
   const pedido = await prisma.pedido.findUnique({
     where: { id },
     select: {
@@ -79,7 +82,7 @@ export async function obtenerPedido(
       subtotal: true,
       costoEnvio: true,
       total: true,
-      observaciones: true,
+      ...(incluirObservaciones ? { observaciones: true } : {}),
       clienteNombre: true,
       clienteTelefono: true,
       clienteDireccion: true,
@@ -134,7 +137,7 @@ export async function obtenerPedido(
     subtotal: Number(pedido.subtotal),
     costoEnvio: Number(pedido.costoEnvio),
     total: Number(pedido.total),
-    observaciones: pedido.observaciones,
+    observaciones: incluirObservaciones ? pedido.observaciones : null,
     clienteNombre: pedido.clienteNombre,
     clienteTelefono: pedido.clienteTelefono,
     clienteDireccion: pedido.clienteDireccion,

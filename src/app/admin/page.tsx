@@ -5,7 +5,7 @@ import {
   ShoppingCart,
   TrendingUp,
 } from "lucide-react";
-import { requerirSesion } from "@/lib/seguridad/requerirSesion";
+import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerConfiguracionGeneral";
 import { obtenerResumenDashboard } from "@/servicios/dashboard/obtenerResumenDashboard";
 import { obtenerProductosCriticos } from "@/servicios/dashboard/obtenerProductosCriticos";
@@ -14,7 +14,6 @@ import { obtenerMovimientosRecientes } from "@/servicios/dashboard/obtenerMovimi
 import { obtenerVentasPorDia } from "@/servicios/dashboard/obtenerVentasPorDia";
 import { formatearMoneda } from "@/lib/utilidades/formatearMoneda";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
-import { Alerta } from "@/componentes/ui/Alerta";
 import { PanelSeccion } from "@/componentes/ui/PanelSeccion";
 import { TarjetaMetrica } from "@/componentes/dashboard/TarjetaMetrica";
 import { GraficoVentas } from "@/componentes/dashboard/GraficoVentas";
@@ -24,11 +23,8 @@ import { ListaMovimientosRecientes } from "@/componentes/dashboard/ListaMovimien
 
 export const metadata = { title: "Dashboard" };
 
-export default async function PaginaDashboard({
-  searchParams,
-}: PageProps<"/admin">) {
-  const usuario = await requerirSesion();
-  const params = await searchParams;
+export default async function PaginaDashboard() {
+  const usuario = await requerirAdmin();
 
   const [configuracion, resumen, criticos, pedidos, movimientos, ventas] =
     await Promise.all([
@@ -48,12 +44,6 @@ export default async function PaginaDashboard({
         titulo={`Hola, ${usuario.nombre ?? usuario.email}`}
         descripcion="Resumen del mes en curso y lo que requiere atención."
       />
-
-      {params.error === "sin-permiso" ? (
-        <Alerta tono="advertencia">
-          No tenés permisos para acceder a esa sección.
-        </Alerta>
-      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <TarjetaMetrica
@@ -129,7 +119,7 @@ export default async function PaginaDashboard({
         </PanelSeccion>
         <PanelSeccion
           titulo="Movimientos recientes"
-          enlace={usuario.rol === "ADMIN" ? "/admin/movimientos" : undefined}
+          enlace="/admin/movimientos"
           textoEnlace="Ver movimientos"
         >
           <ListaMovimientosRecientes
@@ -138,13 +128,6 @@ export default async function PaginaDashboard({
           />
         </PanelSeccion>
       </div>
-
-      {usuario.rol === "EMPLEADO" ? (
-        <p className="rounded-md bg-zinc-100 px-4 py-3 text-sm text-zinc-600">
-          Acceso de solo lectura. Las acciones administrativas no están
-          disponibles para tu rol.
-        </p>
-      ) : null}
     </div>
   );
 }

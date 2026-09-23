@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { Phone } from "lucide-react";
-import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
+import { requerirEmpleado } from "@/lib/seguridad/requerirEmpleado";
 import { obtenerPedido } from "@/servicios/pedidos/obtenerPedido";
-import { estadosSiguientesPedido } from "@/servicios/pedidos/estadosSiguientesPedido";
 import { obtenerConfiguracionGeneral } from "@/servicios/configuracion/obtenerConfiguracionGeneral";
 import {
   ETIQUETAS_ESTADO_PEDIDO,
@@ -21,28 +20,24 @@ import { Dato } from "@/componentes/ui/Dato";
 import { ProductosPedido } from "@/componentes/pedidos/ProductosPedido";
 import { PagosPedido } from "@/componentes/pedidos/PagosPedido";
 import { TotalesPedido } from "@/componentes/pedidos/TotalesPedido";
-import { AccionesEstadoPedido } from "@/componentes/pedidos/AccionesEstadoPedido";
-import { AccionesPago } from "@/componentes/pedidos/AccionesPago";
 import { BotonAbrirMapa } from "@/componentes/pedidos/BotonAbrirMapa";
 
 export const metadata = { title: "Detalle de pedido" };
 
-export default async function PaginaDetallePedido({
+export default async function PaginaDetallePedidoEmpleado({
   params,
-}: PageProps<"/admin/pedidos/[id]">) {
-  const usuario = await requerirAdmin();
+}: PageProps<"/empleado/pedidos/[id]">) {
+  await requerirEmpleado();
   const { id } = await params;
-  const esAdmin = usuario.rol === "ADMIN";
 
   const [pedido, configuracion] = await Promise.all([
-    obtenerPedido(id),
+    obtenerPedido(id, { incluirObservaciones: false }),
     obtenerConfiguracionGeneral(),
   ]);
 
   if (!pedido) notFound();
 
   const { moneda, locale } = configuracion;
-  const siguientes = estadosSiguientesPedido(pedido.estado);
 
   return (
     <div className="space-y-6">
@@ -50,7 +45,7 @@ export default async function PaginaDetallePedido({
         titulo={`Pedido #${pedido.numero}`}
         descripcion={formatearFechaHoraCompacta(pedido.createdAt, locale)}
         acciones={
-          <EnlaceBoton href="/admin/pedidos" variante="secundario">
+          <EnlaceBoton href="/empleado/pedidos" variante="secundario">
             Volver
           </EnlaceBoton>
         }
@@ -138,10 +133,6 @@ export default async function PaginaDetallePedido({
               <Dato etiqueta="Localidad" valor={pedido.clienteLocalidad} />
               <Dato etiqueta="Referencia" valor={pedido.referenciaEntrega} />
               <Dato etiqueta="Método de pago" valor={pedido.metodoPago} />
-              <Dato etiqueta="Registrado por" valor={pedido.vendedor} />
-              {esAdmin ? (
-                <Dato etiqueta="Observaciones" valor={pedido.observaciones} />
-              ) : null}
             </dl>
             {pedido.tipoEntrega === "ENVIO_DOMICILIO" || pedido.mapsUrl ? (
               <div className="mt-4">
@@ -153,30 +144,6 @@ export default async function PaginaDetallePedido({
               </div>
             ) : null}
           </Tarjeta>
-
-          {esAdmin ? (
-            <>
-              <Tarjeta className="p-4 sm:p-5">
-                <h2 className="mb-3 text-sm font-semibold text-zinc-900">
-                  Estado del pedido
-                </h2>
-                <AccionesEstadoPedido
-                  pedidoId={pedido.id}
-                  siguientes={siguientes}
-                />
-              </Tarjeta>
-
-              <Tarjeta className="p-4 sm:p-5">
-                <h2 className="mb-3 text-sm font-semibold text-zinc-900">
-                  Estado del pago
-                </h2>
-                <AccionesPago
-                  pedidoId={pedido.id}
-                  estadoPago={pedido.estadoPago}
-                />
-              </Tarjeta>
-            </>
-          ) : null}
         </div>
       </div>
     </div>

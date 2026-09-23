@@ -5,7 +5,7 @@
 // El orden importa: las reglas más específicas van primero. La primera regla
 // cuyo prefijo coincida con la ruta gana.
 
-export type NivelAcceso = "PUBLICO" | "AUTENTICADO" | "ADMIN";
+export type NivelAcceso = "PUBLICO" | "EMPLEADO" | "ADMIN";
 
 export type ReglaAcceso = {
   prefijo: string;
@@ -13,18 +13,14 @@ export type ReglaAcceso = {
 };
 
 export const REGLAS_ACCESO: ReglaAcceso[] = [
-  // Área exclusivamente administrativa (route group (soloAdmin)).
-  { prefijo: "/admin/categorias", nivel: "ADMIN" },
-  { prefijo: "/admin/movimientos", nivel: "ADMIN" },
-  { prefijo: "/admin/reportes", nivel: "ADMIN" },
-  { prefijo: "/admin/empleados", nivel: "ADMIN" },
-  { prefijo: "/admin/configuracion", nivel: "ADMIN" },
-  { prefijo: "/admin/auditoria", nivel: "ADMIN" },
-  { prefijo: "/admin/asistencia/qr", nivel: "ADMIN" },
-  // Resto del panel: cualquier usuario autenticado (ADMIN o EMPLEADO).
-  { prefijo: "/admin", nivel: "AUTENTICADO" },
+  // Área del empleado: solo rol EMPLEADO.
+  { prefijo: "/empleado", nivel: "EMPLEADO" },
+  // Panel administrativo: solo rol ADMIN.
+  { prefijo: "/admin", nivel: "ADMIN" },
   { prefijo: "/login", nivel: "PUBLICO" },
+  { prefijo: "/api/auth", nivel: "PUBLICO" },
 ];
 
-// Nivel aplicado a rutas que no coinciden con ninguna regla.
-export const NIVEL_POR_DEFECTO: NivelAcceso = "AUTENTICADO";
+// Nivel aplicado a rutas que no coinciden con ninguna regla. Se usa el nivel
+// más restrictivo por defecto: lo no listado exige ADMIN.
+export const NIVEL_POR_DEFECTO: NivelAcceso = "ADMIN";

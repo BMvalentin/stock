@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
-import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
+import { requerirEmpleado } from "@/lib/seguridad/requerirEmpleado";
 import { EnvoltorioPanel } from "@/componentes/panel/EnvoltorioPanel";
 
-// Protección de todas las rutas del panel administrativo: solo ADMIN. Un
-// EMPLEADO es redirigido a su área (/empleado).
-export default async function LayoutPanel({
+// Protección de todas las rutas del área del empleado: solo rol EMPLEADO. Un
+// ADMIN es redirigido al panel administrativo (/admin).
+export default async function LayoutEmpleado({
   children,
 }: {
   children: ReactNode;
 }) {
-  const usuario = await requerirAdmin();
+  const usuario = await requerirEmpleado();
 
   return (
     <EnvoltorioPanel

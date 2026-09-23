@@ -33,7 +33,8 @@ export async function accionRegistrarFichajeQR(
       usuario.id,
     );
 
-    revalidatePath("/admin/asistencia/fichar");
+    revalidatePath("/empleado/fichaje");
+    revalidatePath("/empleado");
 
     return { exito: true, resultado };
   } catch (error) {

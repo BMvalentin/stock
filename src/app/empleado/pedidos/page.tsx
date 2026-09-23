@@ -1,4 +1,4 @@
-import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
+import { requerirEmpleado } from "@/lib/seguridad/requerirEmpleado";
 import { leerParametro } from "@/lib/utilidades/parametros";
 import { calcularTotalPaginas } from "@/lib/utilidades/calcularTotalPaginas";
 import { parsearFechaFiltro } from "@/lib/utilidades/parsearFechaFiltro";
@@ -18,7 +18,6 @@ import type {
   EstadoPedido,
 } from "@/generated/prisma/enums";
 import { EncabezadoPagina } from "@/componentes/ui/EncabezadoPagina";
-import { EnlaceBoton } from "@/componentes/ui/EnlaceBoton";
 import { BarraFiltros } from "@/componentes/ui/BarraFiltros";
 import { CampoBusqueda } from "@/componentes/ui/CampoBusqueda";
 import { SelectFiltro } from "@/componentes/ui/SelectFiltro";
@@ -28,10 +27,10 @@ import { TablaPedidos } from "@/componentes/pedidos/TablaPedidos";
 
 export const metadata = { title: "Pedidos" };
 
-export default async function PaginaPedidos({
+export default async function PaginaPedidosEmpleado({
   searchParams,
-}: PageProps<"/admin/pedidos">) {
-  const usuario = await requerirAdmin();
+}: PageProps<"/empleado/pedidos">) {
+  await requerirEmpleado();
   const params = await searchParams;
 
   const busqueda = leerParametro(params.q);
@@ -70,17 +69,10 @@ export default async function PaginaPedidos({
     <div className="space-y-6">
       <EncabezadoPagina
         titulo="Pedidos"
-        descripcion={`${resultado.total} pedido(s). El estado del pedido y el del pago son independientes.`}
-        acciones={
-          usuario.rol === "ADMIN" ? (
-            <EnlaceBoton href="/admin/pedidos/nuevo" variante="primario">
-              Nuevo pedido
-            </EnlaceBoton>
-          ) : undefined
-        }
+        descripcion={`${resultado.total} pedido(s).`}
       />
 
-      <BarraFiltros baseHref="/admin/pedidos" limpiarHref="/admin/pedidos">
+      <BarraFiltros baseHref="/empleado/pedidos" limpiarHref="/empleado/pedidos">
         <CampoBusqueda
           valorInicial={busqueda}
           placeholder="Buscar por número, cliente o teléfono"
@@ -138,7 +130,7 @@ export default async function PaginaPedidos({
         totalPaginas={totalPaginas}
         totalRegistros={resultado.total}
         porPagina={porPagina}
-        baseHref="/admin/pedidos"
+        baseHref="/empleado/pedidos"
         parametros={{
           q: busqueda,
           estado,

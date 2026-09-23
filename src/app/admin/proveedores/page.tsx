@@ -1,4 +1,4 @@
-import { requerirSesion } from "@/lib/seguridad/requerirSesion";
+import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { leerParametro } from "@/lib/utilidades/parametros";
 import { calcularTotalPaginas } from "@/lib/utilidades/calcularTotalPaginas";
 import { esquemaPaginacion } from "@/lib/validaciones/paginacion";
@@ -17,7 +17,7 @@ type EstadoFiltro = "ACTIVOS" | "INACTIVOS" | "TODOS";
 export default async function PaginaProveedores({
   searchParams,
 }: PageProps<"/admin/proveedores">) {
-  const usuario = await requerirSesion();
+  const usuario = await requerirAdmin();
   const params = await searchParams;
 
   const busqueda = leerParametro(params.q);

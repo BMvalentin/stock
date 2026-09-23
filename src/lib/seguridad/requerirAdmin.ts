@@ -11,7 +11,7 @@ export async function requerirAdmin(): Promise<UsuarioSesion> {
   const usuario = await requerirSesion();
 
   if (usuario.rol !== "ADMIN") {
-    redirect("/admin?error=sin-permiso");
+    redirect("/empleado");
   }
 
   return usuario;

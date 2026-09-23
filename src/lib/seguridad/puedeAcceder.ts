@@ -8,7 +8,7 @@ export function puedeAcceder(rol: Rol | null, pathname: string): boolean {
   const nivel = nivelRequeridoParaRuta(pathname);
 
   if (nivel === "PUBLICO") return true;
-  if (nivel === "AUTENTICADO") return rol !== null;
+  if (nivel === "EMPLEADO") return rol === "EMPLEADO";
 
   return rol === "ADMIN";
 }

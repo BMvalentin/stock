@@ -1,5 +1,5 @@
 import { ArrowLeftRight } from "lucide-react";
-import { requerirSesion } from "@/lib/seguridad/requerirSesion";
+import { requerirAdmin } from "@/lib/seguridad/requerirAdmin";
 import { leerParametro } from "@/lib/utilidades/parametros";
 import { calcularTotalPaginas } from "@/lib/utilidades/calcularTotalPaginas";
 import { esquemaPaginacion } from "@/lib/validaciones/paginacion";
@@ -23,7 +23,7 @@ type FiltroOrden = "nombre" | "stock_asc" | "stock_desc";
 export default async function PaginaStock({
   searchParams,
 }: PageProps<"/admin/stock">) {
-  const usuario = await requerirSesion();
+  const usuario = await requerirAdmin();
   const params = await searchParams;
   const esAdmin = usuario.rol === "ADMIN";
 

@@ -9,7 +9,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "limpiar:datos-prueba": "tsx prisma/scripts/limpiar-datos-prueba.ts",
-    "test": "node --import tsx --test src/servicios/asistencias/asistencia.test.ts src/servicios/liquidaciones/remuneracion.test.ts src/servicios/precios/precio.test.ts src/servicios/productos/sku.test.ts"
+    "test": "node --import tsx --test src/servicios/asistencias/asistencia.test.ts src/servicios/asistencias/puntualidad.test.ts src/servicios/liquidaciones/remuneracion.test.ts src/servicios/precios/precio.test.ts src/servicios/productos/sku.test.ts src/lib/seguridad/acceso.test.ts"
   },
   "engines": {
     "node": ">=20.19.0"

@@ -21,9 +21,10 @@ export type ItemNavegacion = {
   icono: LucideIcon;
 };
 
-// El acceso de cada ítem lo decide la política central (`puedeAcceder`), no el
-// propio listado: así la navegación no puede desincronizarse de la autorización.
-export const ITEMS_NAVEGACION: ItemNavegacion[] = [
+// Menús por rol. Son solo cosméticos: la autorización real de cada ruta la
+// aplica el servidor (layouts y Server Actions). El listado no puede dar
+// acceso a una ruta protegida.
+export const ITEMS_NAVEGACION_ADMIN: ItemNavegacion[] = [
   { etiqueta: "Dashboard", ruta: "/admin", icono: LayoutDashboard },
   { etiqueta: "Mi asistencia", ruta: "/admin/asistencia/fichar", icono: Clock },
   { etiqueta: "Fichaje QR", ruta: "/admin/asistencia/qr", icono: QrCode },
@@ -37,6 +38,13 @@ export const ITEMS_NAVEGACION: ItemNavegacion[] = [
   { etiqueta: "Empleados", ruta: "/admin/empleados", icono: UserCog },
   { etiqueta: "Configuración", ruta: "/admin/configuracion", icono: Settings },
   { etiqueta: "Auditoría", ruta: "/admin/auditoria", icono: ScrollText },
+];
+
+export const ITEMS_NAVEGACION_EMPLEADO: ItemNavegacion[] = [
+  { etiqueta: "Dashboard", ruta: "/empleado", icono: LayoutDashboard },
+  { etiqueta: "Productos", ruta: "/empleado/productos", icono: Package },
+  { etiqueta: "Pedidos", ruta: "/empleado/pedidos", icono: ShoppingCart },
+  { etiqueta: "Fichaje QR", ruta: "/empleado/fichaje", icono: QrCode },
 ];
 
 // Etiquetas legibles para las migas de pan (ruta completa -> texto).
@@ -54,12 +62,17 @@ export const ETIQUETAS_RUTA: Record<string, string> = {
   "/admin/auditoria": "Auditoría",
   "/admin/asistencia/fichar": "Mi asistencia",
   "/admin/asistencia/qr": "Fichaje QR",
+  "/empleado": "Dashboard",
+  "/empleado/productos": "Productos",
+  "/empleado/pedidos": "Pedidos",
+  "/empleado/fichaje": "Fichaje QR",
   nuevo: "Nuevo",
   editar: "Editar",
   asistencia: "Asistencia",
   produccion: "Producción",
   liquidacion: "Liquidaciones",
   fichar: "Fichar",
+  fichaje: "Fichaje",
   qr: "QR",
 };
 
@@ -71,5 +84,6 @@ export const SEGMENTOS_ESPECIALES = [
   "produccion",
   "liquidacion",
   "fichar",
+  "fichaje",
   "qr",
 ];
