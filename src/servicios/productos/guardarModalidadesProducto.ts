@@ -8,12 +8,19 @@ type ModalidadActual = Prisma.ModalidadVentaGetPayload<{
 }>;
 type ReglaActual = ModalidadActual["reglas"][number];
 
+// Solo las reglas `UNITARIO` usan rango superior; `TOTAL` y `PRESENTACION`
+// representan un conjunto/presentación cuyo tamaño es `cantidadDesde`.
+function usaRangoSuperior(tipoPrecio: ReglaPrecioEntrada["tipoPrecio"]): boolean {
+  return tipoPrecio === "UNITARIO";
+}
+
 function datosRegla(entrada: ReglaPrecioEntrada) {
   return {
     metodoPagoId: entrada.metodoPagoId,
     cantidadDesde: entrada.cantidadDesde,
-    // Una promoción (`TOTAL`) no usa rango superior: su tamaño es `cantidadDesde`.
-    cantidadHasta: entrada.tipoPrecio === "TOTAL" ? null : entrada.cantidadHasta,
+    cantidadHasta: usaRangoSuperior(entrada.tipoPrecio)
+      ? entrada.cantidadHasta
+      : null,
     tipoPrecio: entrada.tipoPrecio,
     precio: entrada.precio,
     activo: entrada.activo,
@@ -82,7 +89,9 @@ async function reconciliarReglas(
         metodoPagoId: entrada.metodoPagoId,
         tipoPrecio: entrada.tipoPrecio,
         cantidadDesde: entrada.cantidadDesde,
-        cantidadHasta: entrada.tipoPrecio === "TOTAL" ? null : entrada.cantidadHasta,
+        cantidadHasta: usaRangoSuperior(entrada.tipoPrecio)
+          ? entrada.cantidadHasta
+          : null,
         precioAnterior,
         precioNuevo: entrada.precio,
         usuarioId,

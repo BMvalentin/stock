@@ -263,12 +263,17 @@ model PrecioProductoHistorial {
 // Modalidades de venta y reglas de precio
 // ============================================================
 
-// Tipo de precio de una regla. `UNITARIO` cobra `precio × cantidad` dentro de
-// un rango; `TOTAL` representa un conjunto/promoción de `cantidadDesde` unidades
-// por un precio total y se aplica en múltiplos completos.
+// Tipo de precio de una regla.
+// - `UNITARIO`: cobra `precio × cantidad` dentro de un rango.
+// - `TOTAL`: conjunto/promoción de `cantidadDesde` unidades por un precio total,
+//   aplicada en múltiplos completos eligiendo la combinación más barata.
+// - `PRESENTACION`: presentación discreta de `cantidadDesde` unidades por un
+//   precio total. Al calcular se combina tomando siempre la presentación más
+//   grande que entra (no se descompone en presentaciones menores más baratas).
 enum TipoPrecio {
   UNITARIO
   TOTAL
+  PRESENTACION
 }
 
 // Modalidad de venta de un producto. Un producto puede tener varias (ej. bolsa

@@ -97,13 +97,29 @@ function construirOrden(
 }
 
 function precioReferencia(
-  reglas: { metodoPagoId: string | null; tipoPrecio: string; precio: Prisma.Decimal }[],
+  reglas: {
+    metodoPagoId: string | null;
+    tipoPrecio: string;
+    precio: Prisma.Decimal;
+    cantidadDesde: Prisma.Decimal;
+  }[],
 ): number | null {
   const unitarias = reglas.filter((regla) => regla.tipoPrecio === "UNITARIO");
   const elegida =
     unitarias.find((regla) => regla.metodoPagoId === null) ?? unitarias[0];
 
-  return elegida ? Number(elegida.precio) : null;
+  if (elegida) return Number(elegida.precio);
+
+  // Sin regla unitaria, se toma la presentación más pequeña como precio de
+  // referencia para el listado.
+  const presentaciones = reglas
+    .filter((regla) => regla.tipoPrecio === "PRESENTACION")
+    .sort((a, b) => Number(a.cantidadDesde) - Number(b.cantidadDesde));
+  const presentacion =
+    presentaciones.find((regla) => regla.metodoPagoId === null) ??
+    presentaciones[0];
+
+  return presentacion ? Number(presentacion.precio) : null;
 }
 
 export async function listarProductos(
@@ -145,6 +161,7 @@ export async function listarProductos(
                 metodoPagoId: true,
                 tipoPrecio: true,
                 precio: true,
+                cantidadDesde: true,
               },
             },
           },

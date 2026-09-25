@@ -66,7 +66,7 @@ export const esquemaReglaPrecio = z
       .positive("Debe ser mayor a cero")
       .refine(tieneMaximoTresDecimales, "Máximo 3 decimales"),
     cantidadHasta: numeroOpcionalPositivo,
-    tipoPrecio: z.enum(["UNITARIO", "TOTAL"], {
+    tipoPrecio: z.enum(["UNITARIO", "TOTAL", "PRESENTACION"], {
       message: "Tipo de precio inválido",
     }),
     precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
@@ -85,11 +85,14 @@ export const esquemaReglaPrecio = z
       });
     }
 
-    if (regla.tipoPrecio === "TOTAL" && regla.precio <= 0) {
+    if (
+      (regla.tipoPrecio === "TOTAL" || regla.tipoPrecio === "PRESENTACION") &&
+      regla.precio <= 0
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["precio"],
-        message: "El precio del conjunto debe ser mayor a cero",
+        message: "El precio debe ser mayor a cero",
       });
     }
   });

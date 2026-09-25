@@ -33,6 +33,10 @@ type ModalidadUI = {
   reglas: ReglaUI[];
 };
 
+function usaRangoSuperior(tipoPrecio: TipoPrecio): boolean {
+  return tipoPrecio === "UNITARIO";
+}
+
 function nuevaRegla(): ReglaUI {
   return {
     clave: crypto.randomUUID(),
@@ -107,7 +111,7 @@ function serializar(modalidades: ModalidadUI[]): string {
         cantidadDesde:
           regla.cantidadDesde.trim() === "" ? 0 : Number(regla.cantidadDesde),
         cantidadHasta:
-          regla.tipoPrecio === "TOTAL" || regla.cantidadHasta.trim() === ""
+          !usaRangoSuperior(regla.tipoPrecio) || regla.cantidadHasta.trim() === ""
             ? null
             : Number(regla.cantidadHasta),
         tipoPrecio: regla.tipoPrecio,
@@ -328,7 +332,8 @@ export function SeccionModalidadesPrecios({
               <p className="text-xs text-zinc-500">
                 “Por unidad” cobra precio × cantidad dentro del rango. “Precio
                 del conjunto” es una promoción: X unidades por un total (se
-                aplica en múltiplos completos).
+                aplica en múltiplos completos). “Presentación” es una
+                presentación discreta: se combina tomando siempre la más grande.
               </p>
 
               <div className="space-y-2">
@@ -359,8 +364,8 @@ export function SeccionModalidadesPrecios({
                         type="number"
                         min="0.001"
                         step={porPeso ? "0.001" : "1"}
-                        value={regla.tipoPrecio === "TOTAL" ? "" : regla.cantidadHasta}
-                        disabled={regla.tipoPrecio === "TOTAL"}
+                        value={usaRangoSuperior(regla.tipoPrecio) ? regla.cantidadHasta : ""}
+                        disabled={!usaRangoSuperior(regla.tipoPrecio)}
                         onChange={(evento) =>
                           actualizarRegla(modalidad.clave, regla.clave, {
                             cantidadHasta: evento.target.value,
@@ -369,7 +374,7 @@ export function SeccionModalidadesPrecios({
                         placeholder="Sin límite"
                         className={estilosCampo(
                           undefined,
-                          regla.tipoPrecio === "TOTAL"
+                          !usaRangoSuperior(regla.tipoPrecio)
                             ? "disabled:cursor-not-allowed disabled:bg-zinc-50"
                             : undefined,
                         )}
@@ -389,6 +394,7 @@ export function SeccionModalidadesPrecios({
                       >
                         <option value="UNITARIO">Por unidad</option>
                         <option value="TOTAL">Precio del conjunto</option>
+                        <option value="PRESENTACION">Presentación</option>
                       </select>
                     </label>
 

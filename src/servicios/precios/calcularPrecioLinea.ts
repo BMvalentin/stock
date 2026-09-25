@@ -229,10 +229,69 @@ function calcularConPromociones(
   };
 }
 
+function calcularPresentaciones(
+  presentaciones: ReglaPrecioResoluble[],
+  cantidad: number,
+): PrecioCalculado | null {
+  const qMil = Math.round(cantidad * MIL);
+
+  const ordenadas = presentaciones
+    .filter((presentacion) => presentacion.cantidadDesde > 0)
+    .sort((a, b) => b.cantidadDesde - a.cantidadDesde);
+
+  let restante = qMil;
+  let total = 0;
+  const packs: PackAplicado[] = [];
+
+  for (const presentacion of ordenadas) {
+    const tamanoMil = Math.round(presentacion.cantidadDesde * MIL);
+
+    if (tamanoMil <= 0) continue;
+
+    const veces = Math.floor(restante / tamanoMil);
+
+    if (veces === 0) continue;
+
+    restante -= veces * tamanoMil;
+    total += veces * presentacion.precio;
+    packs.push({
+      cantidad: presentacion.cantidadDesde,
+      precio: presentacion.precio,
+      veces,
+    });
+  }
+
+  // La cantidad no se puede formar con las presentaciones disponibles.
+  if (restante !== 0) return null;
+
+  const subtotal = redondear2(total);
+
+  return {
+    precioUnitario: redondear2(subtotal / cantidad),
+    subtotal,
+    desglose: {
+      tipo: "TOTAL",
+      cantidad,
+      cantidadUnitaria: 0,
+      precioUnitario: 0,
+      packs,
+      subtotal,
+    },
+  };
+}
+
 function calcularConjunto(
   reglas: ReglaPrecioResoluble[],
   cantidad: number,
 ): PrecioCalculado | null {
+  const presentaciones = reglas.filter(
+    (regla) => regla.tipoPrecio === "PRESENTACION",
+  );
+
+  if (presentaciones.length > 0) {
+    return calcularPresentaciones(presentaciones, cantidad);
+  }
+
   const unidad = buscarReglaUnitaria(reglas, cantidad);
   const packs = packsAplicables(reglas, cantidad);
 
@@ -245,8 +304,10 @@ function calcularConjunto(
 
 // Resuelve el precio de una línea del pedido. Prioridad:
 //   1. Reglas específicas del método de pago elegido; si no hay, genéricas.
-//   2. Dentro del conjunto, la combinación más barata de promociones (`TOTAL`,
-//      en múltiplos completos) más el resto al precio de la escala (`UNITARIO`).
+//   2. Si la modalidad tiene presentaciones (`PRESENTACION`), se combinan
+//      tomando la más grande que entra; si no, la combinación más barata de
+//      promociones (`TOTAL`, en múltiplos completos) más el resto al precio de
+//      la escala (`UNITARIO`).
 // Devuelve `null` si no hay ninguna regla aplicable.
 export function calcularPrecioLinea(
   reglas: ReglaPrecioResoluble[],

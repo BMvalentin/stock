@@ -38,6 +38,22 @@ function total(
   };
 }
 
+function presentacion(
+  cantidad: number,
+  precio: number,
+  metodoPagoId: string | null = null,
+): ReglaPrecioResoluble {
+  return {
+    id: `p-${cantidad}-${precio}-${metodoPagoId ?? "gen"}`,
+    metodoPagoId,
+    cantidadDesde: cantidad,
+    cantidadHasta: null,
+    tipoPrecio: "PRESENTACION",
+    precio,
+    prioridad: 0,
+  };
+}
+
 const JABON: ReglaPrecioResoluble[] = [
   unitaria(1, 2000, 9),
   unitaria(10, 1800, 19),
@@ -110,4 +126,60 @@ test("método de pago: si la específica no cubre, cae a la genérica", () => {
 test("sin reglas aplicables devuelve null", () => {
   assert.equal(calcularPrecioLinea([], "efectivo", 1), null);
   assert.equal(calcularPrecioLinea([unitaria(10, 1000)], "efectivo", 1), null);
+});
+
+const QUEBRACHO: ReglaPrecioResoluble[] = [
+  presentacion(10, 5000),
+  presentacion(50, 23000),
+  presentacion(100, 45000),
+  presentacion(500, 230000),
+  presentacion(1000, 420000),
+];
+
+test("presentación: combina tomando siempre la más grande primero", () => {
+  const casos: Array<[number, number]> = [
+    [10, 5000],
+    [20, 10000],
+    [30, 15000],
+    [50, 23000],
+    [60, 28000],
+    [70, 33000],
+    [80, 38000],
+    [100, 45000],
+    [110, 50000],
+    [150, 68000],
+    [500, 230000],
+    [510, 235000],
+    [600, 275000],
+    [1000, 420000],
+  ];
+
+  for (const [cantidad, esperado] of casos) {
+    assert.equal(
+      calcularPrecioLinea(QUEBRACHO, "efectivo", cantidad)?.subtotal,
+      esperado,
+      `cantidad ${cantidad}`,
+    );
+  }
+});
+
+test("presentación: no descompone en combinaciones más baratas", () => {
+  // 5 × 100 kg = $225.000 es más barato, pero debe usar la presentación de 500.
+  assert.equal(calcularPrecioLinea(QUEBRACHO, "efectivo", 500)?.subtotal, 230000);
+  // 6 × 100 kg = $270.000 es más barato, pero debe usar 500 + 100.
+  assert.equal(calcularPrecioLinea(QUEBRACHO, "efectivo", 600)?.subtotal, 275000);
+});
+
+test("presentación: cantidad no formable devuelve null", () => {
+  assert.equal(calcularPrecioLinea(QUEBRACHO, "efectivo", 55), null);
+});
+
+test("presentación: la regla específica de método gana a la genérica", () => {
+  const reglas = [
+    presentacion(50, 23000),
+    presentacion(50, 22000, "transferencia"),
+  ];
+
+  assert.equal(calcularPrecioLinea(reglas, "transferencia", 50)?.subtotal, 22000);
+  assert.equal(calcularPrecioLinea(reglas, "efectivo", 50)?.subtotal, 23000);
 });

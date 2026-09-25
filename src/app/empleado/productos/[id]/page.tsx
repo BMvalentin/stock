@@ -22,7 +22,7 @@ export const metadata = { title: "Detalle de producto" };
 
 function describirRegla(
   regla: {
-    tipoPrecio: "UNITARIO" | "TOTAL";
+    tipoPrecio: "UNITARIO" | "TOTAL" | "PRESENTACION";
     cantidadDesde: number;
     cantidadHasta: number | null;
     precio: number;
@@ -34,7 +34,7 @@ function describirRegla(
 ): string {
   const metodo = regla.metodoPagoNombre ? ` · ${regla.metodoPagoNombre}` : "";
 
-  if (regla.tipoPrecio === "TOTAL") {
+  if (regla.tipoPrecio !== "UNITARIO") {
     return `${regla.cantidadDesde} ${unidad} por ${formatearMoneda(
       regla.precio,
       moneda,
