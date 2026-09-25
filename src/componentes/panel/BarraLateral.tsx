@@ -1,19 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ITEMS_NAVEGACION_ADMIN,
-  ITEMS_NAVEGACION_EMPLEADO,
-  type ItemNavegacion,
+  GRUPOS_NAVEGACION_ADMIN,
+  GRUPOS_NAVEGACION_EMPLEADO,
+  type GrupoNavegacion,
 } from "@/constantes/navegacion";
-import { cn } from "@/lib/utilidades/cn";
 import type { Rol } from "@/generated/prisma/enums";
+import { ElementoNavegacion } from "@/componentes/panel/ElementoNavegacion";
+import { GrupoNavegacion as AcordeonNavegacion } from "@/componentes/panel/GrupoNavegacion";
 
-function itemsParaRol(rol: Rol): ItemNavegacion[] {
+function gruposParaRol(rol: Rol): GrupoNavegacion[] {
   return rol === "ADMIN"
-    ? ITEMS_NAVEGACION_ADMIN
-    : ITEMS_NAVEGACION_EMPLEADO;
+    ? GRUPOS_NAVEGACION_ADMIN
+    : GRUPOS_NAVEGACION_EMPLEADO;
 }
 
 export function BarraLateral({
@@ -24,7 +24,7 @@ export function BarraLateral({
   alNavegar?: () => void;
 }) {
   const rutaActual = usePathname();
-  const items = itemsParaRol(rol);
+  const grupos = gruposParaRol(rol);
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -38,34 +38,27 @@ export function BarraLateral({
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {items.map((item) => {
-          // El dashboard vive en la raíz del área: solo se marca activo con
-          // coincidencia exacta para no resaltarlo en las secciones hijas.
-          const esRaiz = item.ruta === "/admin" || item.ruta === "/empleado";
-          const activo = esRaiz
-            ? rutaActual === item.ruta
-            : rutaActual === item.ruta ||
-              rutaActual.startsWith(`${item.ruta}/`);
-          const Icono = item.icono;
-
-          return (
-            <Link
-              key={item.ruta}
-              href={item.ruta}
-              onClick={alNavegar}
-              aria-current={activo ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                activo
-                  ? "bg-zinc-900 font-medium text-white"
-                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
-              )}
-            >
-              <Icono className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              <span className="truncate">{item.etiqueta}</span>
-            </Link>
-          );
-        })}
+        {grupos.map((grupo, indice) =>
+          grupo.titulo ? (
+            <AcordeonNavegacion
+              key={grupo.titulo}
+              grupo={grupo}
+              rutaActual={rutaActual}
+              alNavegar={alNavegar}
+            />
+          ) : (
+            <div key={indice} className="space-y-0.5">
+              {grupo.items.map((item) => (
+                <ElementoNavegacion
+                  key={item.ruta}
+                  item={item}
+                  rutaActual={rutaActual}
+                  alNavegar={alNavegar}
+                />
+              ))}
+            </div>
+          ),
+        )}
       </nav>
     </div>
   );

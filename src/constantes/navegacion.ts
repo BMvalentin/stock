@@ -21,30 +21,65 @@ export type ItemNavegacion = {
   icono: LucideIcon;
 };
 
+export type GrupoNavegacion = {
+  // Sin título el grupo se renderiza plano (ítems sueltos, sin desplegable).
+  titulo?: string;
+  items: ItemNavegacion[];
+  abiertoPorDefecto?: boolean;
+};
+
 // Menús por rol. Son solo cosméticos: la autorización real de cada ruta la
 // aplica el servidor (layouts y Server Actions). El listado no puede dar
 // acceso a una ruta protegida.
-export const ITEMS_NAVEGACION_ADMIN: ItemNavegacion[] = [
-  { etiqueta: "Dashboard", ruta: "/admin", icono: LayoutDashboard },
-  { etiqueta: "Mi asistencia", ruta: "/admin/asistencia/fichar", icono: Clock },
-  { etiqueta: "Fichaje QR", ruta: "/admin/asistencia/qr", icono: QrCode },
-  { etiqueta: "Productos", ruta: "/admin/productos", icono: Package },
-  { etiqueta: "Categorías", ruta: "/admin/categorias", icono: Tags },
-  { etiqueta: "Proveedores", ruta: "/admin/proveedores", icono: Truck },
-  { etiqueta: "Stock", ruta: "/admin/stock", icono: Boxes },
-  { etiqueta: "Movimientos", ruta: "/admin/movimientos", icono: ArrowLeftRight },
-  { etiqueta: "Pedidos", ruta: "/admin/pedidos", icono: ShoppingCart },
-  { etiqueta: "Reportes", ruta: "/admin/reportes", icono: BarChart3 },
-  { etiqueta: "Empleados", ruta: "/admin/empleados", icono: UserCog },
-  { etiqueta: "Configuración", ruta: "/admin/configuracion", icono: Settings },
-  { etiqueta: "Auditoría", ruta: "/admin/auditoria", icono: ScrollText },
+export const GRUPOS_NAVEGACION_ADMIN: GrupoNavegacion[] = [
+  {
+    items: [
+      { etiqueta: "Dashboard", ruta: "/admin", icono: LayoutDashboard },
+      { etiqueta: "Pedidos", ruta: "/admin/pedidos", icono: ShoppingCart },
+      { etiqueta: "Productos", ruta: "/admin/productos", icono: Package },
+      { etiqueta: "Stock", ruta: "/admin/stock", icono: Boxes },
+    ],
+  },
+  {
+    titulo: "Inventario",
+    items: [
+      { etiqueta: "Categorías", ruta: "/admin/categorias", icono: Tags },
+      { etiqueta: "Movimientos", ruta: "/admin/movimientos", icono: ArrowLeftRight },
+    ],
+  },
+  {
+    titulo: "Personal",
+    items: [
+      { etiqueta: "Mi asistencia", ruta: "/admin/asistencia/fichar", icono: Clock },
+      { etiqueta: "Fichaje QR", ruta: "/admin/asistencia/qr", icono: QrCode },
+      { etiqueta: "Empleados", ruta: "/admin/empleados", icono: UserCog },
+    ],
+  },
+  {
+    titulo: "Gestión",
+    items: [
+      { etiqueta: "Proveedores", ruta: "/admin/proveedores", icono: Truck },
+      { etiqueta: "Reportes", ruta: "/admin/reportes", icono: BarChart3 },
+    ],
+  },
+  {
+    titulo: "Sistema",
+    items: [
+      { etiqueta: "Configuración", ruta: "/admin/configuracion", icono: Settings },
+      { etiqueta: "Auditoría", ruta: "/admin/auditoria", icono: ScrollText },
+    ],
+  },
 ];
 
-export const ITEMS_NAVEGACION_EMPLEADO: ItemNavegacion[] = [
-  { etiqueta: "Dashboard", ruta: "/empleado", icono: LayoutDashboard },
-  { etiqueta: "Productos", ruta: "/empleado/productos", icono: Package },
-  { etiqueta: "Pedidos", ruta: "/empleado/pedidos", icono: ShoppingCart },
-  { etiqueta: "Fichaje QR", ruta: "/empleado/fichaje", icono: QrCode },
+export const GRUPOS_NAVEGACION_EMPLEADO: GrupoNavegacion[] = [
+  {
+    items: [
+      { etiqueta: "Dashboard", ruta: "/empleado", icono: LayoutDashboard },
+      { etiqueta: "Fichaje QR", ruta: "/empleado/fichaje", icono: QrCode },
+      { etiqueta: "Productos", ruta: "/empleado/productos", icono: Package },
+      { etiqueta: "Pedidos", ruta: "/empleado/pedidos", icono: ShoppingCart },
+    ],
+  },
 ];
 
 // Etiquetas legibles para las migas de pan (ruta completa -> texto).
